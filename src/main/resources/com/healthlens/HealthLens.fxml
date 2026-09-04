@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.chart.BarChart?>
+<?import javafx.scene.chart.CategoryAxis?>
+<?import javafx.scene.chart.NumberAxis?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ChoiceBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ProgressBar?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.Slider?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+
+<!--
+    ROOT: StackPane so the background ImageView can sit BEHIND everything else.
+    The ImageView (id="backgroundImageView") is layer 1.
+    The translucent "overlay-pane" BorderPane (all the real UI) is layer 2, on top of it.
+-->
+<StackPane fx:id="rootPane" prefHeight="700.0" prefWidth="1050.0"
+           styleClass="root-pane"
+           xmlns="http://javafx.com/javafx"
+           xmlns:fx="http://javafx.com/fxml"
+           fx:controller="com.healthlens.HealthLensController">
+
+    <!-- ===================== LAYER 1: BACKGROUND IMAGE ===================== -->
+    <ImageView fx:id="backgroundImageView" preserveRatio="false" smooth="true" />
+
+    <!-- Optional dark scrim so text stays readable no matter what image is used -->
+    <StackPane fx:id="scrimPane" styleClass="scrim-pane" />
+
+    <!-- ===================== LAYER 2: MAIN UI CARD ===================== -->
+    <BorderPane fx:id="overlayPane" styleClass="overlay-pane">
+        <StackPane.margin>
+            <Insets bottom="28.0" left="28.0" right="28.0" top="28.0" />
+        </StackPane.margin>
+
+        <!-- ===================== TOP: TITLE ===================== -->
+        <top>
+            <VBox alignment="CENTER" spacing="2.0" styleClass="title-box" BorderPane.alignment="CENTER">
+                <Label styleClass="title-label" text="HealthLens" />
+                <Label styleClass="subtitle-label" text="Your daily health habits, visualized" />
+            </VBox>
+        </top>
+
+        <!-- ===================== CENTER: FORM (left) + VISUALS (right) ===================== -->
+        <center>
+            <HBox spacing="24.0" styleClass="content-box" BorderPane.alignment="CENTER">
+
+                <!-- ===== LEFT: INPUT FORM ===== -->
+                <VBox spacing="16.0" styleClass="form-panel" HBox.hgrow="NEVER">
+
+                    <Label styleClass="section-label" text="Today's Habits" />
+
+                    <!-- Sleep -->
+                    <VBox spacing="4.0">
+                        <HBox alignment="CENTER_LEFT" spacing="8.0">
+                            <Label styleClass="control-label" text="Sleep (hours)" />
+                            <Label fx:id="sleepValueLabel" styleClass="value-label" text="7.0 h" />
+                        </HBox>
+                        <Slider fx:id="sleepSlider" blockIncrement="0.5" majorTickUnit="2"
+                                max="12" min="0" showTickLabels="true" showTickMarks="true" value="7" />
+                    </VBox>
+
+                    <!-- Water -->
+                    <VBox spacing="4.0">
+                        <HBox alignment="CENTER_LEFT" spacing="8.0">
+                            <Label styleClass="control-label" text="Water (glasses)" />
+                            <Label fx:id="waterValueLabel" styleClass="value-label" text="6" />
+                        </HBox>
+                        <Slider fx:id="waterSlider" blockIncrement="1" majorTickUnit="2"
+                                max="15" min="0" showTickLabels="true" showTickMarks="true" value="6" />
+                    </VBox>
+
+                    <!-- Exercise -->
+                    <VBox spacing="4.0">
+                        <HBox alignment="CENTER_LEFT" spacing="8.0">
+                            <Label styleClass="control-label" text="Exercise (minutes)" />
+                            <Label fx:id="exerciseValueLabel" styleClass="value-label" text="20 min" />
+                        </HBox>
+                        <Slider fx:id="exerciseSlider" blockIncrement="5" majorTickUnit="30"
+                                max="120" min="0" showTickLabels="true" showTickMarks="true" value="20" />
+                    </VBox>
+
+                    <!-- Stress -->
+                    <VBox spacing="4.0">
+                        <HBox alignment="CENTER_LEFT" spacing="8.0">
+                            <Label styleClass="control-label" text="Stress level (1-10)" />
+                            <Label fx:id="stressValueLabel" styleClass="value-label" text="5" />
+                        </HBox>
+                        <Slider fx:id="stressSlider" blockIncrement="1" majorTickUnit="1"
+                                max="10" min="1" showTickLabels="true" showTickMarks="true" value="5" />
+                    </VBox>
+
+                    <!-- Mood -->
+                    <VBox spacing="4.0">
+                        <Label styleClass="control-label" text="Mood" />
+                        <ChoiceBox fx:id="moodChoiceBox" prefWidth="220.0" />
+                    </VBox>
+
+                    <Button fx:id="updateButton" mnemonicParsing="false" onAction="#handleUpdate"
+                            styleClass="primary-button" text="Update Dashboard" />
+
+                </VBox>
+
+                <Separator orientation="VERTICAL" />
+
+                <!-- ===== RIGHT: VISUAL FEEDBACK ===== -->
+                <VBox spacing="14.0" styleClass="visual-panel" HBox.hgrow="ALWAYS">
+
+                    <Label styleClass="section-label" text="Health Indicators" />
+
+                    <!-- Progress bars -->
+                    <VBox spacing="10.0">
+                        <VBox spacing="2.0">
+                            <Label styleClass="control-label" text="Sleep goal (8h)" />
+                            <ProgressBar fx:id="sleepBar" maxWidth="Infinity" progress="0.0" styleClass="progress-neutral" />
+                        </VBox>
+                        <VBox spacing="2.0">
+                            <Label styleClass="control-label" text="Water goal (8 glasses)" />
+                            <ProgressBar fx:id="waterBar" maxWidth="Infinity" progress="0.0" styleClass="progress-neutral" />
+                        </VBox>
+                        <VBox spacing="2.0">
+                            <Label styleClass="control-label" text="Exercise goal (30 min)" />
+                            <ProgressBar fx:id="exerciseBar" maxWidth="Infinity" progress="0.0" styleClass="progress-neutral" />
+                        </VBox>
+                        <VBox spacing="2.0">
+                            <Label styleClass="control-label" text="Stress control (lower is better)" />
+                            <ProgressBar fx:id="stressBar" maxWidth="Infinity" progress="0.0" styleClass="progress-neutral" />
+                        </VBox>
+                    </VBox>
+
+                    <!-- Chart -->
+                    <BarChart fx:id="healthChart" animated="true" legendVisible="false" prefHeight="210.0" styleClass="health-chart">
+                        <xAxis>
+                            <CategoryAxis fx:id="xAxis" side="BOTTOM" />
+                        </xAxis>
+                        <yAxis>
+                            <NumberAxis fx:id="yAxis" lowerBound="0" side="LEFT" tickUnit="20" upperBound="100" />
+                        </yAxis>
+                    </BarChart>
+
+                    <!-- Summary -->
+                    <VBox styleClass="summary-box" spacing="4.0">
+                        <Label fx:id="overallScoreLabel" styleClass="overall-score-label" text="Overall Score: --" />
+                        <Label fx:id="summaryLabel" styleClass="summary-text" text="Fill in your habits and click &quot;Update Dashboard&quot; to see your summary."
+                               wrapText="true" />
+                    </VBox>
+
+                </VBox>
+            </HBox>
+        </center>
+
+        <!-- ===================== BOTTOM: FOOTER ===================== -->
+        <bottom>
+            <Label styleClass="footer-label" text="HealthLens • Track sleep, water, exercise, mood &amp; stress" BorderPane.alignment="CENTER" />
+        </bottom>
+
+    </BorderPane>
+</StackPane>

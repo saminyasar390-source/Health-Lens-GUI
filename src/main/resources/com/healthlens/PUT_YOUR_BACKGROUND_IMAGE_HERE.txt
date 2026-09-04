@@ -1,0 +1,20 @@
+Add your background image to this folder and name it exactly:
+
+    background.jpg
+
+(same folder as HealthLens.fxml and styles.css)
+
+The app looks for /com/healthlens/background.jpg on the classpath. If it's not
+found, HealthLens still runs fine — it just falls back to a plain gradient
+background defined in styles.css.
+
+If you'd rather use a .png, either:
+  1) rename your file to background.jpg (JavaFX's Image loader doesn't care
+     about the true format, just make sure it's a valid image file), or
+  2) open HealthLensController.java and change:
+         getClass().getResourceAsStream("background.jpg")
+     to:
+         getClass().getResourceAsStream("background.png")
+
+Delete this .txt file once you've added your real image — it won't affect
+the build if you leave it, it's just a reminder.

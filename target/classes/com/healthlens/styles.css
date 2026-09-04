@@ -1,0 +1,169 @@
+/* ===================== ROOT / BACKGROUND ===================== */
+
+.root-pane {
+    /* Fallback background used only if background.jpg is missing */
+    -fx-background-color: linear-gradient(to bottom right, #2b3a55, #1a2233);
+}
+
+/* Dark translucent layer over the background image so text stays readable */
+.scrim-pane {
+    -fx-background-color: rgba(10, 15, 25, 0.35);
+}
+
+/* ===================== MAIN CARD ===================== */
+
+.overlay-pane {
+    -fx-background-color: rgba(255, 255, 255, 0.90);
+    -fx-background-radius: 18;
+    -fx-border-radius: 18;
+    -fx-border-color: rgba(255, 255, 255, 0.5);
+    -fx-border-width: 1;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.35), 24, 0.15, 0, 8);
+    -fx-padding: 20;
+}
+
+.title-box {
+    -fx-padding: 0 0 12 0;
+}
+
+.title-label {
+    -fx-font-size: 30px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #1e2b3c;
+}
+
+.subtitle-label {
+    -fx-font-size: 13px;
+    -fx-text-fill: #5b6b7f;
+}
+
+.content-box {
+    -fx-padding: 10 0 0 0;
+}
+
+.footer-label {
+    -fx-font-size: 11px;
+    -fx-text-fill: #8794a3;
+    -fx-padding: 12 0 0 0;
+}
+
+/* ===================== FORM PANEL (LEFT) ===================== */
+
+.form-panel {
+    -fx-min-width: 280;
+    -fx-pref-width: 300;
+    -fx-padding: 4 16 4 0;
+}
+
+.section-label {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #223047;
+    -fx-padding: 0 0 4 0;
+}
+
+.control-label {
+    -fx-font-size: 12.5px;
+    -fx-text-fill: #3a4a5e;
+    -fx-font-weight: 600;
+}
+
+.value-label {
+    -fx-font-size: 12px;
+    -fx-text-fill: #0f766e;
+    -fx-font-weight: bold;
+}
+
+.primary-button {
+    -fx-background-color: linear-gradient(to right, #0ea5a1, #0284c7);
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-font-size: 13px;
+    -fx-background-radius: 8;
+    -fx-padding: 10 18;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(2,132,199,0.4), 10, 0.2, 0, 3);
+}
+
+.primary-button:hover {
+    -fx-background-color: linear-gradient(to right, #14b8b3, #0369a1);
+}
+
+.primary-button:pressed {
+    -fx-background-color: #0369a1;
+}
+
+/* ===================== VISUAL PANEL (RIGHT) ===================== */
+
+.visual-panel {
+    -fx-padding: 4 0 4 16;
+}
+
+.health-chart {
+    -fx-background-color: transparent;
+}
+
+.health-chart .chart-plot-background {
+    -fx-background-color: rgba(240, 245, 250, 0.6);
+}
+
+.health-chart .axis-label,
+.health-chart .axis-tick-mark,
+.health-chart .axis {
+    -fx-text-fill: #3a4a5e;
+    -fx-tick-label-fill: #3a4a5e;
+}
+
+/* Bar colors (single-series bar chart) */
+.health-chart .default-color0.chart-bar {
+    -fx-bar-fill: #0ea5a1;
+}
+
+/* ===================== PROGRESS BARS ===================== */
+
+.progress-neutral .bar {
+    -fx-background-color: #94a3b8;
+}
+
+.progress-good .bar {
+    -fx-background-color: #22c55e;
+}
+
+.progress-medium .bar {
+    -fx-background-color: #f59e0b;
+}
+
+.progress-poor .bar {
+    -fx-background-color: #ef4444;
+}
+
+/* ===================== SUMMARY BOX ===================== */
+
+.summary-box {
+    -fx-background-color: rgba(240, 245, 250, 0.7);
+    -fx-background-radius: 10;
+    -fx-padding: 12 14;
+}
+
+.overall-score-label {
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #223047;
+}
+
+.score-good {
+    -fx-text-fill: #16a34a;
+}
+
+.score-medium {
+    -fx-text-fill: #d97706;
+}
+
+.score-poor {
+    -fx-text-fill: #dc2626;
+}
+
+.summary-text {
+    -fx-font-size: 12.5px;
+    -fx-text-fill: #334155;
+}
