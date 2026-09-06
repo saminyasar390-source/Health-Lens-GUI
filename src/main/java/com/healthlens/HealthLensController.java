@@ -1,24 +1,60 @@
 package com.healthlens;
 
+import com.healthlens.model.HealthData;
+import com.healthlens.model.ScoreCalculator;
+import com.healthlens.model.ScoreResult;
+
+import javafx.animation.Interpolator;
+import javafx.animation.KeyFrame;
+import javafx.animation.KeyValue;
+import javafx.animation.Timeline;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
+import javafx.geometry.Insets;
+import javafx.scene.Scene;
 import javafx.scene.chart.BarChart;
 import javafx.scene.chart.CategoryAxis;
 import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;
+import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.ChoiceBox;
+import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
+import javafx.scene.control.ListView;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.Slider;
+import javafx.scene.control.Spinner;
+import javafx.scene.control.SpinnerValueFactory;
+import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.input.KeyCode;
+import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
+import javafx.util.Duration;
 
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
+import java.util.prefs.Preferences;
 
 /**
- * Controller for HealthLens.fxml.
+ * CONTROLLER for HealthLens.fxml.
+ *
+ * This class's only job is to mediate between the VIEW (the FXML controls
+ * below) and the MODEL (com.healthlens.model.HealthData / ScoreCalculator /
+ * ScoreResult). It reads input controls, asks the Model to do the actual
+ * health-scoring work, and pushes the Model's results back onto the UI.
+ * It intentionally contains NO scoring formulas or health-summary wording —
+ * that all lives in ScoreCalculator, which has no idea JavaFX exists.
+ *
  * Field names below are bound to fx:id values in the FXML via @FXML.
  * If you rename an fx:id in Scene Builder, rename the matching field here too.
  */
@@ -28,6 +64,11 @@ public class HealthLensController {
     @FXML private StackPane rootPane;
     @FXML private ImageView backgroundImageView;
     @FXML private StackPane scrimPane;
+
+    // --- Top bar ---
+    @FXML private Button themeToggleButton;
+    @FXML private Button settingsButton;
+    @FXML private Button chatButton;
 
     // --- Inputs ---
     @FXML private Slider sleepSlider;
@@ -44,11 +85,19 @@ public class HealthLensController {
 
     @FXML private ChoiceBox<String> moodChoiceBox;
 
-    // --- Outputs: progress bars ---
+    @FXML private Button updateButton;
+    @FXML private Button resetButton;
+
+    // --- Outputs: progress bars + goal labels ---
     @FXML private ProgressBar sleepBar;
     @FXML private ProgressBar waterBar;
     @FXML private ProgressBar exerciseBar;
     @FXML private ProgressBar stressBar;
+
+    @FXML private Label sleepGoalLabel;
+    @FXML private Label waterGoalLabel;
+    @FXML private Label exerciseGoalLabel;
+    @FXML private Label stressGoalLabel;
 
     // --- Outputs: chart ---
     @FXML private BarChart<String, Number> healthChart;
@@ -59,24 +108,31 @@ public class HealthLensController {
     @FXML private Label overallScoreLabel;
     @FXML private Label summaryLabel;
 
-    // Goals used for scoring
-    private static final double SLEEP_GOAL_HOURS = 8.0;
-    private static final double WATER_GOAL_GLASSES = 8.0;
-    private static final double EXERCISE_GOAL_MINUTES = 30.0;
-    private static final double STRESS_COMFORT_MAX = 4.0; // stress <= 4 is considered "in control"
+    /** THE MODEL. Everything about "what the data means" is delegated to this + ScoreCalculator. */
+    private final HealthData healthData = new HealthData();
 
+    private boolean darkMode = false;
     private XYChart.Series<String, Number> chartSeries;
+
+    // Where saved settings/preferences live (per OS user, no file management needed)
+    private final Preferences prefs = Preferences.userNodeForPackage(HealthLensController.class);
 
     @FXML
     public void initialize() {
+        loadPreferences();
         setupBackgroundImage();
         setupMoodChoices();
         setupLiveValueLabels();
         setupChart();
+        setupKeyboardShortcut();
+        updateGoalLabels();
+        applyThemeWhenSceneReady();
 
         // Show an initial snapshot on load
         handleUpdate();
     }
+
+    // ===================== BACKGROUND IMAGE =====================
 
     /**
      * Loads /com/healthlens/background.jpg from resources and stretches it to
@@ -110,11 +166,13 @@ public class HealthLensController {
         scrimPane.prefHeightProperty().bind(rootPane.heightProperty());
     }
 
+    // ===================== SETUP =====================
+
     private void setupMoodChoices() {
         moodChoiceBox.setItems(FXCollections.observableArrayList(
                 "Great", "Good", "Okay", "Low", "Stressed"
         ));
-        moodChoiceBox.setValue("Okay");
+        moodChoiceBox.setValue(healthData.getMood());
     }
 
     private void setupLiveValueLabels() {
@@ -141,102 +199,342 @@ public class HealthLensController {
         healthChart.getData().add(chartSeries);
     }
 
+    /** Enter key anywhere in the window triggers "Update Dashboard". */
+    private void setupKeyboardShortcut() {
+        rootPane.sceneProperty().addListener((obs, oldScene, newScene) -> {
+            if (newScene != null) {
+                newScene.setOnKeyPressed(event -> {
+                    if (event.getCode() == KeyCode.ENTER) {
+                        handleUpdate();
+                    }
+                });
+            }
+        });
+    }
+
+    private void updateGoalLabels() {
+        sleepGoalLabel.setText(String.format(Locale.US, "Sleep goal (%.0fh)", healthData.getSleepGoalHours()));
+        waterGoalLabel.setText(String.format(Locale.US, "Water goal (%.0f glasses)", healthData.getWaterGoalGlasses()));
+        exerciseGoalLabel.setText(String.format(Locale.US, "Exercise goal (%.0f min)", healthData.getExerciseGoalMinutes()));
+        stressGoalLabel.setText(String.format(Locale.US, "Stress control (comfortable ≤ %.0f)", healthData.getStressComfortMax()));
+    }
+
+    // ===================== THEME (LIGHT / DARK) =====================
+
+    private void applyThemeWhenSceneReady() {
+        rootPane.sceneProperty().addListener((obs, oldScene, newScene) -> {
+            if (newScene != null) {
+                applyTheme(newScene);
+            }
+        });
+    }
+
+    @FXML
+    private void handleToggleTheme() {
+        darkMode = !darkMode;
+        Scene scene = rootPane.getScene();
+        if (scene != null) {
+            applyTheme(scene);
+        }
+        prefs.putBoolean("darkMode", darkMode);
+    }
+
+    private void applyTheme(Scene scene) {
+        String stylesheet = darkMode ? "styles-dark.css" : "styles.css";
+        scene.getStylesheets().clear();
+        scene.getStylesheets().add(getClass().getResource(stylesheet).toExternalForm());
+        themeToggleButton.setText(darkMode ? "☀" : "🌙");
+    }
+
+    // ===================== SETTINGS DIALOG (CUSTOM GOALS) =====================
+
+    @FXML
+    private void handleOpenSettings() {
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.setTitle("Customize Your Goals");
+        dialog.setHeaderText("Set the daily targets HealthLens should track you against.");
+
+        ButtonType saveButtonType = new ButtonType("Save", ButtonType.OK.getButtonData());
+        dialog.getDialogPane().getButtonTypes().addAll(saveButtonType, ButtonType.CANCEL);
+
+        GridPane grid = new GridPane();
+        grid.setHgap(12);
+        grid.setVgap(12);
+        grid.setPadding(new Insets(16));
+
+        Spinner<Double> sleepGoalSpinner = new Spinner<>(
+                new SpinnerValueFactory.DoubleSpinnerValueFactory(1, 12, healthData.getSleepGoalHours(), 0.5));
+        Spinner<Double> waterGoalSpinner = new Spinner<>(
+                new SpinnerValueFactory.DoubleSpinnerValueFactory(1, 15, healthData.getWaterGoalGlasses(), 1));
+        Spinner<Double> exerciseGoalSpinner = new Spinner<>(
+                new SpinnerValueFactory.DoubleSpinnerValueFactory(5, 120, healthData.getExerciseGoalMinutes(), 5));
+        Spinner<Double> stressMaxSpinner = new Spinner<>(
+                new SpinnerValueFactory.DoubleSpinnerValueFactory(1, 10, healthData.getStressComfortMax(), 1));
+
+        for (Spinner<Double> s : new Spinner[]{sleepGoalSpinner, waterGoalSpinner, exerciseGoalSpinner, stressMaxSpinner}) {
+            s.setEditable(true);
+            s.setPrefWidth(100);
+        }
+
+        grid.add(new Label("Sleep goal (hours):"), 0, 0);
+        grid.add(sleepGoalSpinner, 1, 0);
+        grid.add(new Label("Water goal (glasses):"), 0, 1);
+        grid.add(waterGoalSpinner, 1, 1);
+        grid.add(new Label("Exercise goal (minutes):"), 0, 2);
+        grid.add(exerciseGoalSpinner, 1, 2);
+        grid.add(new Label("Stress comfortable at or below:"), 0, 3);
+        grid.add(stressMaxSpinner, 1, 3);
+
+        dialog.getDialogPane().setContent(grid);
+
+        // Match the app's current theme so the popup doesn't feel out of place
+        dialog.getDialogPane().getStylesheets().add(
+                getClass().getResource(darkMode ? "styles-dark.css" : "styles.css").toExternalForm());
+
+        dialog.showAndWait().ifPresent(result -> {
+            if (result == saveButtonType) {
+                healthData.setSleepGoalHours(sleepGoalSpinner.getValue());
+                healthData.setWaterGoalGlasses(waterGoalSpinner.getValue());
+                healthData.setExerciseGoalMinutes(exerciseGoalSpinner.getValue());
+                healthData.setStressComfortMax(stressMaxSpinner.getValue());
+
+                savePreferences();
+                updateGoalLabels();
+                handleUpdate();
+            }
+        });
+    }
+
+    // ===================== CHAT ASSISTANT =====================
+
     /**
-     * Reads all inputs, recomputes progress bars / chart / summary text.
-     * Wired to the "Update Dashboard" button via onAction="#handleUpdate".
+     * Opens a small chat window where the user can type sentences like
+     * "I slept 7 hours and drank 4 glasses of water, feeling stressed".
+     * ChatParser (rule-based, no ML model) extracts whatever it can. The
+     * Controller applies matched values to the sliders/mood (the VIEW),
+     * then calls handleUpdate(), which is the normal path that copies View
+     * values into the Model and re-scores.
+     */
+    @FXML
+    private void handleOpenChat() {
+        Stage chatStage = new Stage();
+        chatStage.setTitle("HealthLens Assistant");
+        chatStage.initModality(Modality.NONE);
+        chatStage.initOwner(rootPane.getScene() != null ? rootPane.getScene().getWindow() : null);
+
+        ListView<String> chatLog = new ListView<>();
+        chatLog.getStyleClass().add("chat-log");
+        chatLog.setPrefHeight(320);
+        chatLog.setFocusTraversable(false);
+        chatLog.getItems().add("Bot: Tell me about your day — e.g. \"I slept 7 hours, drank "
+                + "5 glasses of water, exercised 20 minutes, feeling stressed.\"");
+
+        TextField input = new TextField();
+        input.setPromptText("Type a message and press Enter...");
+        HBox.setHgrow(input, Priority.ALWAYS);
+
+        Button sendButton = new Button("Send");
+        sendButton.getStyleClass().add("primary-button");
+
+        Runnable sendMessage = () -> {
+            String text = input.getText();
+            if (text == null || text.isBlank()) {
+                return;
+            }
+            chatLog.getItems().add("You: " + text);
+            String reply = processChatMessage(text);
+            chatLog.getItems().add("Bot: " + reply);
+            chatLog.scrollTo(chatLog.getItems().size() - 1);
+            input.clear();
+        };
+
+        sendButton.setOnAction(e -> sendMessage.run());
+        input.setOnAction(e -> sendMessage.run());
+
+        HBox inputRow = new HBox(8, input, sendButton);
+        VBox root = new VBox(10, chatLog, inputRow);
+        root.setPadding(new Insets(16));
+        root.getStyleClass().add("chat-window");
+
+        Scene chatScene = new Scene(root, 420, 440);
+        chatScene.getStylesheets().add(
+                getClass().getResource(darkMode ? "styles-dark.css" : "styles.css").toExternalForm());
+
+        chatStage.setScene(chatScene);
+        chatStage.show();
+    }
+
+    /**
+     * Runs the typed message through ChatParser, applies any values it
+     * found to the real sliders/mood picker, refreshes the dashboard, and
+     * returns a human-readable reply describing what was understood.
+     */
+    private String processChatMessage(String message) {
+        ChatParser.ChatUpdate update = ChatParser.parse(message);
+
+        if (update.isEmpty()) {
+            return "I couldn't pick anything out of that — try mentioning hours of sleep, "
+                    + "glasses of water, minutes of exercise, a stress level, or how you're feeling.";
+        }
+
+        List<String> understood = new ArrayList<>();
+
+        if (update.sleepHours != null) {
+            sleepSlider.setValue(clamp(update.sleepHours, sleepSlider.getMin(), sleepSlider.getMax()));
+            understood.add(String.format(Locale.US, "sleep: %.1fh", update.sleepHours));
+        }
+        if (update.waterGlasses != null) {
+            waterSlider.setValue(clamp(update.waterGlasses, waterSlider.getMin(), waterSlider.getMax()));
+            understood.add(String.format(Locale.US, "water: %.0f glasses", update.waterGlasses));
+        }
+        if (update.exerciseMinutes != null) {
+            exerciseSlider.setValue(clamp(update.exerciseMinutes, exerciseSlider.getMin(), exerciseSlider.getMax()));
+            understood.add(String.format(Locale.US, "exercise: %.0f min", update.exerciseMinutes));
+        }
+        if (update.stressLevel != null) {
+            stressSlider.setValue(clamp(update.stressLevel, stressSlider.getMin(), stressSlider.getMax()));
+            understood.add(String.format(Locale.US, "stress: %.0f/10", update.stressLevel));
+        }
+        if (update.mood != null) {
+            moodChoiceBox.setValue(update.mood);
+            understood.add("mood: " + update.mood);
+        }
+
+        handleUpdate();
+
+        return "Got it — updated " + String.join(", ", understood) + ". Dashboard refreshed!";
+    }
+
+    private double clamp(double v, double min, double max) {
+        return Math.max(min, Math.min(max, v));
+    }
+
+    // ===================== UPDATE (VIEW -> MODEL -> VIEW) =====================
+
+    /**
+     * The core Controller flow:
+     *   1) Read the VIEW (sliders/mood) into the MODEL (healthData)
+     *   2) Ask the MODEL (via ScoreCalculator) to compute a ScoreResult
+     *   3) Push that ScoreResult back onto the VIEW (bars, chart, summary)
+     * No scoring math or health advice text lives in this method — see
+     * ScoreCalculator for that.
      */
     @FXML
     private void handleUpdate() {
-        double sleepHours = sleepSlider.getValue();
-        double waterGlasses = waterSlider.getValue();
-        double exerciseMinutes = exerciseSlider.getValue();
-        double stressLevel = stressSlider.getValue();
-        String mood = moodChoiceBox.getValue();
+        // 1) View -> Model
+        healthData.setSleepHours(sleepSlider.getValue());
+        healthData.setWaterGlasses(waterSlider.getValue());
+        healthData.setExerciseMinutes(exerciseSlider.getValue());
+        healthData.setStressLevel(stressSlider.getValue());
+        healthData.setMood(moodChoiceBox.getValue());
 
-        double sleepScore = clamp01(sleepHours / SLEEP_GOAL_HOURS);
-        double waterScore = clamp01(waterGlasses / WATER_GOAL_GLASSES);
-        double exerciseScore = clamp01(exerciseMinutes / EXERCISE_GOAL_MINUTES);
-        // Stress is inverted: 10 (max stress) -> 0 score, 1 (min stress) -> ~1 score
-        double stressScore = clamp01(1.0 - ((stressLevel - 1.0) / 9.0));
+        // 2) Model does the work
+        ScoreResult result = ScoreCalculator.calculate(healthData);
 
-        updateBar(sleepBar, sleepScore);
-        updateBar(waterBar, waterScore);
-        updateBar(exerciseBar, exerciseScore);
-        updateBar(stressBar, stressScore);
+        // 3) Model -> View
+        animateBar(sleepBar, result.getSleepScore());
+        animateBar(waterBar, result.getWaterScore());
+        animateBar(exerciseBar, result.getExerciseScore());
+        animateBar(stressBar, result.getStressScore());
 
-        chartSeries.getData().get(0).setYValue(sleepScore * 100);
-        chartSeries.getData().get(1).setYValue(waterScore * 100);
-        chartSeries.getData().get(2).setYValue(exerciseScore * 100);
-        chartSeries.getData().get(3).setYValue(stressScore * 100);
+        chartSeries.getData().get(0).setYValue(result.getSleepScore() * 100);
+        chartSeries.getData().get(1).setYValue(result.getWaterScore() * 100);
+        chartSeries.getData().get(2).setYValue(result.getExerciseScore() * 100);
+        chartSeries.getData().get(3).setYValue(result.getStressScore() * 100);
 
-        double overall = (sleepScore + waterScore + exerciseScore + stressScore) / 4.0;
-        renderSummary(overall, mood, sleepHours, waterGlasses, exerciseMinutes, stressLevel);
+        renderSummary(result);
+        savePreferences();
     }
 
-    private void updateBar(ProgressBar bar, double score) {
-        bar.setProgress(score);
+    @FXML
+    private void handleReset() {
+        healthData.resetEntriesToDefaults();
+        sleepSlider.setValue(healthData.getSleepHours());
+        waterSlider.setValue(healthData.getWaterGlasses());
+        exerciseSlider.setValue(healthData.getExerciseMinutes());
+        stressSlider.setValue(healthData.getStressLevel());
+        moodChoiceBox.setValue(healthData.getMood());
+        handleUpdate();
+    }
+
+    /** Smoothly animates a progress bar to its new value instead of jumping instantly. */
+    private void animateBar(ProgressBar bar, double target) {
         bar.getStyleClass().removeAll("progress-good", "progress-medium", "progress-poor", "progress-neutral");
-        if (score >= 0.8) {
+        if (target >= 0.8) {
             bar.getStyleClass().add("progress-good");
-        } else if (score >= 0.5) {
+        } else if (target >= 0.5) {
             bar.getStyleClass().add("progress-medium");
         } else {
             bar.getStyleClass().add("progress-poor");
         }
+
+        Timeline timeline = new Timeline(
+                new KeyFrame(Duration.millis(450),
+                        new KeyValue(bar.progressProperty(), target, Interpolator.EASE_BOTH))
+        );
+        timeline.play();
     }
 
-    private void renderSummary(double overall, String mood, double sleep, double water,
-                                double exercise, double stress) {
-        int percent = (int) Math.round(overall * 100);
-        overallScoreLabel.setText("Overall Score: " + percent + "%");
+    /** Pure UI work: takes a ScoreResult from the Model and displays it. No scoring logic here. */
+    private void renderSummary(ScoreResult result) {
+        overallScoreLabel.setText("Overall Score: " + result.getOverallPercent() + "%");
 
         overallScoreLabel.getStyleClass().removeAll("score-good", "score-medium", "score-poor");
         summaryLabel.getStyleClass().removeAll("summary-good", "summary-medium", "summary-poor");
 
-        String tier;
-        if (overall >= 0.8) {
-            tier = "score-good";
-            summaryLabel.getStyleClass().add("summary-good");
-        } else if (overall >= 0.5) {
-            tier = "score-medium";
-            summaryLabel.getStyleClass().add("summary-medium");
-        } else {
-            tier = "score-poor";
-            summaryLabel.getStyleClass().add("summary-poor");
-        }
-        overallScoreLabel.getStyleClass().add(tier);
+        overallScoreLabel.getStyleClass().add("score-" + result.getTier());
+        summaryLabel.getStyleClass().add("summary-" + result.getTier());
 
-        StringBuilder sb = new StringBuilder();
-        sb.append("Mood today: ").append(mood).append(". ");
-
-        if (sleep < SLEEP_GOAL_HOURS) {
-            sb.append("You're a bit short on sleep — try to wind down earlier tonight. ");
-        } else {
-            sb.append("Nice, you hit your sleep goal. ");
-        }
-
-        if (water < WATER_GOAL_GLASSES) {
-            sb.append("Drink a few more glasses of water today. ");
-        } else {
-            sb.append("Hydration looks solid. ");
-        }
-
-        if (exercise < EXERCISE_GOAL_MINUTES) {
-            sb.append("A short walk could help you reach your activity goal. ");
-        } else {
-            sb.append("Great job staying active. ");
-        }
-
-        if (stress > STRESS_COMFORT_MAX) {
-            sb.append("Stress is running a little high — consider a short break or some deep breathing.");
-        } else {
-            sb.append("Stress levels look manageable.");
-        }
-
-        summaryLabel.setText(sb.toString());
+        summaryLabel.setText(result.getSummaryText());
     }
 
-    private double clamp01(double v) {
-        return Math.max(0.0, Math.min(1.0, v));
+    // ===================== PREFERENCES (SAVE / LOAD) =====================
+
+    /**
+     * Restores goals, last-entered habit values, mood, and theme choice from
+     * the previous session straight into the Model. Uses java.util.prefs,
+     * which stores small values per-OS-user automatically — no file to manage.
+     */
+    private void loadPreferences() {
+        healthData.setSleepGoalHours(prefs.getDouble("goal.sleep", HealthData.DEFAULT_SLEEP_GOAL_HOURS));
+        healthData.setWaterGoalGlasses(prefs.getDouble("goal.water", HealthData.DEFAULT_WATER_GOAL_GLASSES));
+        healthData.setExerciseGoalMinutes(prefs.getDouble("goal.exercise", HealthData.DEFAULT_EXERCISE_GOAL_MINUTES));
+        healthData.setStressComfortMax(prefs.getDouble("goal.stressMax", HealthData.DEFAULT_STRESS_COMFORT_MAX));
+        darkMode = prefs.getBoolean("darkMode", false);
+
+        healthData.setSleepHours(prefs.getDouble("last.sleep", HealthData.DEFAULT_SLEEP_HOURS));
+        healthData.setWaterGlasses(prefs.getDouble("last.water", HealthData.DEFAULT_WATER_GLASSES));
+        healthData.setExerciseMinutes(prefs.getDouble("last.exercise", HealthData.DEFAULT_EXERCISE_MINUTES));
+        healthData.setStressLevel(prefs.getDouble("last.stress", HealthData.DEFAULT_STRESS_LEVEL));
+        healthData.setMood(prefs.get("last.mood", HealthData.DEFAULT_MOOD));
+
+        sleepSlider.setValue(healthData.getSleepHours());
+        waterSlider.setValue(healthData.getWaterGlasses());
+        exerciseSlider.setValue(healthData.getExerciseMinutes());
+        stressSlider.setValue(healthData.getStressLevel());
+
+        // Live value labels won't have fired their listeners yet at this point
+        // (they're attached in setupLiveValueLabels(), called right after this),
+        // so set the initial label text manually here.
+        sleepValueLabel.setText(String.format(Locale.US, "%.1f h", sleepSlider.getValue()));
+        waterValueLabel.setText(String.format(Locale.US, "%d", Math.round(waterSlider.getValue())));
+        exerciseValueLabel.setText(String.format(Locale.US, "%d min", Math.round(exerciseSlider.getValue())));
+        stressValueLabel.setText(String.format(Locale.US, "%d", Math.round(stressSlider.getValue())));
+    }
+
+    private void savePreferences() {
+        prefs.putDouble("goal.sleep", healthData.getSleepGoalHours());
+        prefs.putDouble("goal.water", healthData.getWaterGoalGlasses());
+        prefs.putDouble("goal.exercise", healthData.getExerciseGoalMinutes());
+        prefs.putDouble("goal.stressMax", healthData.getStressComfortMax());
+
+        prefs.putDouble("last.sleep", healthData.getSleepHours());
+        prefs.putDouble("last.water", healthData.getWaterGlasses());
+        prefs.putDouble("last.exercise", healthData.getExerciseMinutes());
+        prefs.putDouble("last.stress", healthData.getStressLevel());
+
+        if (healthData.getMood() != null) {
+            prefs.put("last.mood", healthData.getMood());
+        }
     }
 }

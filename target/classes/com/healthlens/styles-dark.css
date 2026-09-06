@@ -1,0 +1,230 @@
+/* ===================== ROOT / BACKGROUND ===================== */
+
+.root-pane {
+    -fx-background-color: linear-gradient(to bottom right, #0b1220, #05070c);
+}
+
+.scrim-pane {
+    -fx-background-color: rgba(0, 0, 0, 0.55);
+}
+
+/* ===================== MAIN CARD ===================== */
+
+.overlay-pane {
+    -fx-background-color: rgba(17, 24, 39, 0.92);
+    -fx-background-radius: 18;
+    -fx-border-radius: 18;
+    -fx-border-color: rgba(255, 255, 255, 0.08);
+    -fx-border-width: 1;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.6), 24, 0.15, 0, 8);
+    -fx-padding: 20;
+}
+
+.title-box {
+    -fx-padding: 0 0 12 0;
+}
+
+.title-label {
+    -fx-font-size: 30px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #f1f5f9;
+}
+
+.subtitle-label {
+    -fx-font-size: 13px;
+    -fx-text-fill: #94a3b8;
+}
+
+.content-box {
+    -fx-padding: 10 0 0 0;
+}
+
+.footer-label {
+    -fx-font-size: 11px;
+    -fx-text-fill: #64748b;
+    -fx-padding: 12 0 0 0;
+}
+
+/* ===================== FORM PANEL (LEFT) ===================== */
+
+.form-panel {
+    -fx-min-width: 280;
+    -fx-pref-width: 300;
+    -fx-padding: 4 16 4 0;
+}
+
+.section-label {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #e2e8f0;
+    -fx-padding: 0 0 4 0;
+}
+
+.control-label {
+    -fx-font-size: 12.5px;
+    -fx-text-fill: #cbd5e1;
+    -fx-font-weight: 600;
+}
+
+.value-label {
+    -fx-font-size: 12px;
+    -fx-text-fill: #2dd4bf;
+    -fx-font-weight: bold;
+}
+
+.hint-label {
+    -fx-font-size: 10.5px;
+    -fx-text-fill: #64748b;
+    -fx-font-style: italic;
+}
+
+.primary-button {
+    -fx-background-color: linear-gradient(to right, #0ea5a1, #0284c7);
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-font-size: 13px;
+    -fx-background-radius: 8;
+    -fx-padding: 10 18;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(2,132,199,0.5), 10, 0.2, 0, 3);
+}
+
+.primary-button:hover {
+    -fx-background-color: linear-gradient(to right, #14b8b3, #0369a1);
+}
+
+.primary-button:pressed {
+    -fx-background-color: #0369a1;
+}
+
+.reset-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #cbd5e1;
+    -fx-font-size: 12.5px;
+    -fx-border-color: #475569;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-padding: 10 16;
+    -fx-cursor: hand;
+}
+
+.reset-button:hover {
+    -fx-background-color: rgba(148,163,184,0.15);
+}
+
+/* ===================== ICON BUTTONS ===================== */
+
+.icon-button {
+    -fx-background-color: rgba(255,255,255,0.08);
+    -fx-background-radius: 20;
+    -fx-min-width: 34;
+    -fx-min-height: 34;
+    -fx-font-size: 14px;
+    -fx-cursor: hand;
+    -fx-border-radius: 20;
+    -fx-border-color: rgba(255,255,255,0.12);
+    -fx-border-width: 1;
+    -fx-text-fill: #e2e8f0;
+}
+
+.icon-button:hover {
+    -fx-background-color: rgba(255,255,255,0.16);
+}
+
+/* ===================== VISUAL PANEL (RIGHT) ===================== */
+
+.visual-panel {
+    -fx-padding: 4 0 4 16;
+}
+
+.health-chart {
+    -fx-background-color: transparent;
+}
+
+.health-chart .chart-plot-background {
+    -fx-background-color: rgba(30, 41, 59, 0.6);
+}
+
+.health-chart .axis-label,
+.health-chart .axis-tick-mark,
+.health-chart .axis {
+    -fx-text-fill: #cbd5e1;
+    -fx-tick-label-fill: #cbd5e1;
+}
+
+.health-chart .default-color0.chart-bar {
+    -fx-bar-fill: #2dd4bf;
+}
+
+/* ===================== PROGRESS BARS ===================== */
+
+.progress-neutral .bar {
+    -fx-background-color: #64748b;
+}
+
+.progress-good .bar {
+    -fx-background-color: #22c55e;
+}
+
+.progress-medium .bar {
+    -fx-background-color: #f59e0b;
+}
+
+.progress-poor .bar {
+    -fx-background-color: #ef4444;
+}
+
+/* ===================== SUMMARY BOX ===================== */
+
+.summary-box {
+    -fx-background-color: rgba(30, 41, 59, 0.7);
+    -fx-background-radius: 10;
+    -fx-padding: 12 14;
+}
+
+.overall-score-label {
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #e2e8f0;
+}
+
+.score-good {
+    -fx-text-fill: #4ade80;
+}
+
+.score-medium {
+    -fx-text-fill: #fbbf24;
+}
+
+.score-poor {
+    -fx-text-fill: #f87171;
+}
+
+.summary-text {
+    -fx-font-size: 12.5px;
+    -fx-text-fill: #cbd5e1;
+}
+
+/* ===================== CHAT ASSISTANT WINDOW ===================== */
+
+.chat-window {
+    -fx-background-color: rgba(17, 24, 39, 0.97);
+}
+
+.chat-log {
+    -fx-background-color: rgba(30, 41, 59, 0.6);
+    -fx-background-radius: 10;
+    -fx-control-inner-background: rgba(30, 41, 59, 0.6);
+    -fx-padding: 6;
+}
+
+.chat-bubble-user {
+    -fx-text-fill: #e2e8f0;
+    -fx-font-size: 12.5px;
+}
+
+.chat-bubble-bot {
+    -fx-text-fill: #2dd4bf;
+    -fx-font-size: 12.5px;
+    -fx-font-weight: 600;
+}

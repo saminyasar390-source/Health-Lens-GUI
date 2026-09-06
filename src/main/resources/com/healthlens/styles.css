@@ -93,6 +93,44 @@
     -fx-background-color: #0369a1;
 }
 
+.reset-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #475569;
+    -fx-font-size: 13px;
+    -fx-border-color: #94a3b8;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-padding: 10 16;
+    -fx-cursor: hand;
+}
+
+.reset-button:hover {
+    -fx-background-color: rgba(148, 163, 184, 0.15);
+}
+
+.hint-label {
+    -fx-font-size: 10.5px;
+    -fx-text-fill: #94a3b8;
+    -fx-font-style: italic;
+}
+
+/* Small circular icon buttons in the top-right (theme toggle, settings) */
+.icon-button {
+    -fx-background-color: rgba(255, 255, 255, 0.6);
+    -fx-background-radius: 50%;
+    -fx-min-width: 34;
+    -fx-min-height: 34;
+    -fx-max-width: 34;
+    -fx-max-height: 34;
+    -fx-font-size: 14px;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 4, 0.1, 0, 1);
+}
+
+.icon-button:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.9);
+}
+
 /* ===================== VISUAL PANEL (RIGHT) ===================== */
 
 .visual-panel {
@@ -166,4 +204,71 @@
 .summary-text {
     -fx-font-size: 12.5px;
     -fx-text-fill: #334155;
+}
+
+/* ===================== NEW: ICON BUTTONS (theme / settings / chat) ===================== */
+
+.icon-button {
+    -fx-background-color: rgba(255,255,255,0.6);
+    -fx-background-radius: 20;
+    -fx-min-width: 34;
+    -fx-min-height: 34;
+    -fx-font-size: 14px;
+    -fx-cursor: hand;
+    -fx-border-radius: 20;
+    -fx-border-color: rgba(0,0,0,0.08);
+    -fx-border-width: 1;
+}
+
+.icon-button:hover {
+    -fx-background-color: rgba(255,255,255,0.9);
+}
+
+/* ===================== NEW: RESET BUTTON ===================== */
+
+.reset-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #475569;
+    -fx-font-size: 12.5px;
+    -fx-border-color: #94a3b8;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-padding: 10 16;
+    -fx-cursor: hand;
+}
+
+.reset-button:hover {
+    -fx-background-color: rgba(148,163,184,0.15);
+}
+
+/* ===================== NEW: HINT TEXT ===================== */
+
+.hint-label {
+    -fx-font-size: 10.5px;
+    -fx-text-fill: #94a3b8;
+    -fx-font-style: italic;
+}
+
+/* ===================== NEW: CHAT ASSISTANT WINDOW ===================== */
+
+.chat-window {
+    -fx-background-color: rgba(255, 255, 255, 0.97);
+}
+
+.chat-log {
+    -fx-background-color: rgba(240, 245, 250, 0.6);
+    -fx-background-radius: 10;
+    -fx-control-inner-background: transparent;
+    -fx-padding: 6;
+}
+
+.chat-bubble-user {
+    -fx-text-fill: #0f172a;
+    -fx-font-size: 12.5px;
+}
+
+.chat-bubble-bot {
+    -fx-text-fill: #0284c7;
+    -fx-font-size: 12.5px;
+    -fx-font-weight: 600;
 }
