@@ -69,6 +69,7 @@ public class HealthLensController {
     @FXML private Button themeToggleButton;
     @FXML private Button settingsButton;
     @FXML private Button chatButton;
+    @FXML private Label subtitleLabel;
 
     // --- Inputs ---
     @FXML private Slider sleepSlider;
@@ -130,6 +131,17 @@ public class HealthLensController {
 
         // Show an initial snapshot on load
         handleUpdate();
+    }
+
+    /**
+     * Called by GuideController right after loading this screen, if the user
+     * came in through Login -> Guide -> HealthLens. Demonstrates passing
+     * data between scenes: the username typed at login ends up here.
+     */
+    public void setWelcomeMessage(String userName) {
+        if (userName != null && !userName.isBlank()) {
+            subtitleLabel.setText("Welcome back, " + userName + "! Your daily health habits, visualized.");
+        }
     }
 
     // ===================== BACKGROUND IMAGE =====================

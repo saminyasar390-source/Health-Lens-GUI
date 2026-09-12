@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.PasswordField?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+
+<StackPane fx:id="loginRoot" prefHeight="500.0" prefWidth="420.0" styleClass="root-pane"
+           xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+           fx:controller="com.healthlens.auth.LoginController">
+
+    <VBox alignment="CENTER" spacing="14.0" styleClass="overlay-pane" maxWidth="340.0" maxHeight="380.0">
+        <padding>
+            <Insets bottom="28.0" left="28.0" right="28.0" top="28.0" />
+        </padding>
+
+        <Label styleClass="title-label" text="HealthLens" />
+        <Label styleClass="subtitle-label" text="Sign in to start your health journey" />
+
+        <VBox spacing="4.0">
+            <Label styleClass="control-label" text="Username" />
+            <TextField fx:id="usernameField" promptText="Enter username" />
+        </VBox>
+
+        <VBox spacing="4.0">
+            <Label styleClass="control-label" text="Password" />
+            <StackPane>
+                <PasswordField fx:id="passwordField" promptText="Enter password" onAction="#handleLogin" />
+                <TextField fx:id="passwordVisibleField" promptText="Enter password"
+                           visible="false" managed="false" onAction="#handleLogin" />
+            </StackPane>
+        </VBox>
+
+        <Button fx:id="toggleVisibilityButton" mnemonicParsing="false" onAction="#handleTogglePasswordVisibility"
+                styleClass="reset-button" text="Show password" />
+
+        <Label fx:id="errorLabel" managed="false" styleClass="error-label" text="" visible="false" wrapText="true" />
+
+        <Button fx:id="loginButton" mnemonicParsing="false" onAction="#handleLogin"
+                styleClass="primary-button" text="Log In" />
+
+        <Label styleClass="hint-label" text="Hint (for this demo): username 'samin', password 'healthlens123'" wrapText="true" />
+    </VBox>
+</StackPane>

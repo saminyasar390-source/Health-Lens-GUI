@@ -46,7 +46,7 @@
                 <center>
                     <VBox alignment="CENTER" spacing="2.0" BorderPane.alignment="CENTER">
                         <Label styleClass="title-label" text="HealthLens" />
-                        <Label styleClass="subtitle-label" text="Your daily health habits, visualized" />
+                        <Label fx:id="subtitleLabel" styleClass="subtitle-label" text="Your daily health habits, visualized" />
                     </VBox>
                 </center>
                 <right>

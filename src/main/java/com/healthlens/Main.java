@@ -8,22 +8,29 @@ import javafx.stage.Stage;
 
 /**
  * Entry point for the HealthLens application.
- * Loads HealthLens.fxml (built/edited in Scene Builder) and shows it on stage.
+ *
+ * The app now starts at the Login screen (com/healthlens/auth/Login.fxml).
+ * A successful login switches the Stage's scene to the Guide
+ * (com/healthlens/guide/Guide.fxml), and finishing the Guide switches it
+ * again to the main dashboard (HealthLens.fxml). All three screens share
+ * one Stage — this is the classic "Scene Switching" pattern, done for real
+ * across three screens instead of two.
+ *
+ * Want to skip straight to the dashboard while developing? Change the
+ * getResource(...) line below to load "HealthLens.fxml" directly.
  */
 public class Main extends Application {
 
     @Override
     public void start(Stage stage) throws Exception {
-        FXMLLoader loader = new FXMLLoader(getClass().getResource("HealthLens.fxml"));
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/healthlens/auth/Login.fxml"));
         Parent root = loader.load();
 
-        Scene scene = new Scene(root, 1050, 700);
-        scene.getStylesheets().add(getClass().getResource("styles.css").toExternalForm());
+        Scene scene = new Scene(root, 420, 500);
+        scene.getStylesheets().add(getClass().getResource("/com/healthlens/styles.css").toExternalForm());
 
-        stage.setTitle("HealthLens — Daily Health Dashboard");
+        stage.setTitle("HealthLens — Log In");
         stage.setScene(scene);
-        stage.setMinWidth(950);
-        stage.setMinHeight(650);
         stage.show();
     }
 

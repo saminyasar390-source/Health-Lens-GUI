@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.ColorPicker?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.DatePicker?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.Menu?>
+<?import javafx.scene.control.MenuBar?>
+<?import javafx.scene.control.MenuItem?>
+<?import javafx.scene.control.ProgressBar?>
+<?import javafx.scene.control.RadioButton?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.Slider?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.ToggleGroup?>
+<?import javafx.scene.control.TreeView?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.FlowPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+
+<BorderPane fx:id="guideRoot" prefHeight="620.0" prefWidth="780.0" styleClass="root-pane"
+            xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.healthlens.guide.GuideController">
+
+    <fx:define>
+        <ToggleGroup fx:id="experienceGroup" />
+    </fx:define>
+
+    <!-- ===================== TOP: MENU BAR ===================== -->
+    <top>
+        <VBox>
+            <MenuBar>
+                <menus>
+                    <Menu text="File">
+                        <items>
+                            <MenuItem onAction="#handleMenuRestart" text="New (Restart Guide)" />
+                            <MenuItem onAction="#handleMenuAbout" text="Open (About HealthLens)" />
+                            <MenuItem onAction="#handleMenuExit" text="Exit" />
+                        </items>
+                    </Menu>
+                </menus>
+            </MenuBar>
+            <Label fx:id="stepLabel" styleClass="hint-label" text="Step 1 of 10">
+                <padding>
+                    <Insets bottom="4.0" left="12.0" top="4.0" />
+                </padding>
+            </Label>
+        </VBox>
+    </top>
+
+    <!-- ===================== CENTER: ONE PAGE VISIBLE AT A TIME ===================== -->
+    <center>
+        <StackPane fx:id="pageStack" styleClass="overlay-pane">
+            <BorderPane.margin>
+                <Insets bottom="10.0" left="20.0" right="20.0" top="10.0" />
+            </BorderPane.margin>
+
+            <!-- PAGE 1: Welcome + FlowPane + Alert type buttons -->
+            <VBox fx:id="page1" spacing="12.0" styleClass="guide-page">
+                <Label fx:id="welcomeLabel" styleClass="title-label" text="Welcome to HealthLens!" />
+                <Label styleClass="subtitle-label" text="This quick guide shows you what you'll be tracking, using the same controls HealthLens itself is built from." wrapText="true" />
+                <FlowPane hgap="10.0" vgap="10.0">
+                    <Label styleClass="badge-label" text="🌙 Sleep" />
+                    <Label styleClass="badge-label" text="💧 Water" />
+                    <Label styleClass="badge-label" text="🏃 Exercise" />
+                    <Label styleClass="badge-label" text="🧠 Stress" />
+                    <Label styleClass="badge-label" text="🙂 Mood" />
+                </FlowPane>
+                <Separator />
+                <Label styleClass="section-label" text="Alert dialog demo" />
+                <HBox spacing="10.0">
+                    <Button onAction="#handleShowInfoAlert" styleClass="reset-button" text="🔔 Show Info Alert" />
+                    <Button onAction="#handleShowWarningAlert" styleClass="reset-button" text="⚠ Show Warning Alert" />
+                    <Button onAction="#handleShowErrorAlert" styleClass="reset-button" text="❌ Show Error Alert" />
+                </HBox>
+            </VBox>
+
+            <!-- PAGE 2: RadioButton + ToggleGroup + CheckBox -->
+            <VBox fx:id="page2" managed="false" spacing="10.0" styleClass="guide-page" visible="false">
+                <Label styleClass="section-label" text="How experienced are you with health apps?" />
+                <RadioButton fx:id="beginnerRadio" selected="true" text="Beginner" toggleGroup="$experienceGroup" />
+                <RadioButton fx:id="intermediateRadio" text="Intermediate" toggleGroup="$experienceGroup" />
+                <RadioButton fx:id="expertRadio" text="Expert" toggleGroup="$experienceGroup" />
+                <Label fx:id="experienceResultLabel" styleClass="value-label" text="Selected: Beginner" />
+                <Separator />
+                <Label styleClass="section-label" text="What do you want to track?" />
+                <CheckBox fx:id="sleepCheck" text="Sleep" />
+                <CheckBox fx:id="waterCheck" text="Water" />
+                <CheckBox fx:id="exerciseCheck" text="Exercise" />
+                <CheckBox fx:id="stressCheck" text="Stress" />
+                <CheckBox fx:id="moodCheck" text="Mood" />
+                <Button onAction="#handleInterestsSubmit" styleClass="reset-button" text="Submit" />
+                <Label fx:id="interestsResultLabel" styleClass="value-label" wrapText="true" />
+            </VBox>
+
+            <!-- PAGE 3: ComboBox + ColorPicker + DatePicker -->
+            <VBox fx:id="page3" managed="false" spacing="14.0" styleClass="guide-page" visible="false">
+                <Label styleClass="section-label" text="A few preferences" />
+                <VBox spacing="4.0">
+                    <Label styleClass="control-label" text="Country" />
+                    <ComboBox fx:id="countryCombo" prefWidth="220.0" />
+                </VBox>
+                <VBox spacing="4.0">
+                    <Label styleClass="control-label" text="Pick an accent color" />
+                    <HBox alignment="CENTER_LEFT" spacing="10.0">
+                        <ColorPicker fx:id="accentColorPicker" />
+                        <Label fx:id="colorDemoLabel" text="Like this!" />
+                    </HBox>
+                </VBox>
+                <VBox spacing="4.0">
+                    <Label styleClass="control-label" text="When do you want to start your health journey?" />
+                    <DatePicker fx:id="startDatePicker" />
+                    <Label fx:id="startDateResultLabel" styleClass="value-label" />
+                </VBox>
+            </VBox>
+
+            <!-- PAGE 4: ListView -->
+            <VBox fx:id="page4" managed="false" spacing="10.0" styleClass="guide-page" visible="false">
+                <Label styleClass="section-label" text="A few healthy habit tips" />
+                <ListView fx:id="tipsListView" prefHeight="180.0" />
+                <Label fx:id="tipDetailLabel" styleClass="value-label" wrapText="true" />
+            </VBox>
+
+            <!-- PAGE 5: TreeView -->
+            <VBox fx:id="page5" managed="false" spacing="10.0" styleClass="guide-page" visible="false">
+                <Label styleClass="section-label" text="Explore HealthLens's feature categories" />
+                <TreeView fx:id="featureTreeView" prefHeight="220.0" />
+                <Label fx:id="treeSelectionLabel" styleClass="value-label" />
+            </VBox>
+
+            <!-- PAGE 6: TableView + Person + ObservableList -->
+            <VBox fx:id="page6" managed="false" spacing="10.0" styleClass="guide-page" visible="false">
+                <Label styleClass="section-label" text="Sample users and their weekly scores" />
+                <TableView fx:id="personTable" prefHeight="200.0">
+                    <columns>
+                        <TableColumn fx:id="nameColumn" prefWidth="140.0" text="Name" />
+                        <TableColumn fx:id="tipColumn" prefWidth="260.0" text="Favorite Habit" />
+                        <TableColumn fx:id="scoreColumn" prefWidth="120.0" text="Weekly Score" />
+                    </columns>
+                </TableView>
+            </VBox>
+
+            <!-- PAGE 7: TextArea -->
+            <VBox fx:id="page7" managed="false" spacing="10.0" styleClass="guide-page" visible="false">
+                <Label styleClass="section-label" text="Write a personal health goal for this month" />
+                <TextArea fx:id="goalTextArea" prefHeight="180.0" promptText="e.g. Sleep 8 hours every night this month..." wrapText="true" />
+                <Button onAction="#handleClearGoal" styleClass="reset-button" text="Clear" />
+            </VBox>
+
+            <!-- PAGE 8: Slider controlling font size -->
+            <VBox fx:id="page8" managed="false" spacing="14.0" styleClass="guide-page" visible="false">
+                <Label styleClass="section-label" text="Adjust text size for comfortable reading" />
+                <Label fx:id="fontDemoLabel" text="The quick brown fox jumps over the lazy dog." wrapText="true" />
+                <Slider fx:id="fontSizeSlider" majorTickUnit="10" max="40" min="10" showTickLabels="true" showTickMarks="true" value="16" />
+            </VBox>
+
+            <!-- PAGE 9: ProgressBar Accumulate demo -->
+            <VBox fx:id="page9" managed="false" spacing="12.0" styleClass="guide-page" visible="false">
+                <Label styleClass="section-label" text="This is how HealthLens's progress bars work" />
+                <Label styleClass="control-label" text="Enter a target number of presses:" />
+                <TextField fx:id="targetField" prefWidth="100.0" promptText="e.g. 5" />
+                <HBox spacing="10.0">
+                    <Button onAction="#handleAccumulate" styleClass="primary-button" text="Accumulate" />
+                    <Button onAction="#handleResetAccumulate" styleClass="reset-button" text="Reset" />
+                </HBox>
+                <Label fx:id="currentSumLabel" styleClass="value-label" text="Current sum: 0" />
+                <ProgressBar fx:id="accumulateProgressBar" maxWidth="Infinity" progress="0.0" styleClass="progress-neutral" />
+            </VBox>
+
+            <!-- PAGE 10: ImageView + FileChooser -->
+            <VBox fx:id="page10" alignment="CENTER" managed="false" spacing="14.0" styleClass="guide-page" visible="false">
+                <Label styleClass="section-label" text="Add a profile picture (optional)" />
+                <ImageView fx:id="profileImageView" fitHeight="120.0" fitWidth="120.0" preserveRatio="true" />
+                <Button fx:id="browseButton" onAction="#handleBrowseImage" styleClass="reset-button" text="Browse..." />
+            </VBox>
+
+        </StackPane>
+    </center>
+
+    <!-- ===================== BOTTOM: WIZARD NAVIGATION ===================== -->
+    <bottom>
+        <HBox alignment="CENTER" spacing="12.0" styleClass="wizard-nav">
+            <padding>
+                <Insets bottom="16.0" left="20.0" right="20.0" top="10.0" />
+            </padding>
+            <Button fx:id="backButton" disable="true" mnemonicParsing="false" onAction="#handleBack"
+                    styleClass="reset-button" text="← Back" />
+            <Region HBox.hgrow="ALWAYS" />
+            <Button fx:id="nextButton" mnemonicParsing="false" onAction="#handleNext"
+                    styleClass="primary-button" text="Next →" />
+        </HBox>
+    </bottom>
+
+</BorderPane>
