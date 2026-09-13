@@ -16,6 +16,7 @@
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
+<?import javafx.scene.shape.Circle?>
 
 <!--
     ROOT: StackPane so the background ImageView can sit BEHIND everything else.
@@ -51,6 +52,14 @@
                 </center>
                 <right>
                     <HBox alignment="CENTER_RIGHT" spacing="8.0" BorderPane.alignment="CENTER_RIGHT">
+                        <StackPane fx:id="profileAvatarStack" onMouseClicked="#handleOpenProfile" styleClass="profile-avatar">
+                            <Circle fx:id="profileCircleBg" radius="17.0" styleClass="profile-circle-bg" />
+                            <Label fx:id="profileInitialsLabel" styleClass="profile-initials" text="?" />
+                            <ImageView fx:id="profileImageView" fitHeight="34.0" fitWidth="34.0" visible="false" />
+                            <tooltip>
+                                <Tooltip text="Your profile — click to change picture, email, or background" />
+                            </tooltip>
+                        </StackPane>
                         <Button fx:id="themeToggleButton" mnemonicParsing="false" onAction="#handleToggleTheme"
                                 styleClass="icon-button" text="🌙">
                             <tooltip>

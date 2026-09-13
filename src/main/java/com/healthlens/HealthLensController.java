@@ -16,6 +16,7 @@ import javafx.scene.chart.BarChart;
 import javafx.scene.chart.CategoryAxis;
 import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.ChoiceBox;
@@ -35,10 +36,14 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Circle;
+import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
+import java.io.File;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
@@ -70,6 +75,10 @@ public class HealthLensController {
     @FXML private Button settingsButton;
     @FXML private Button chatButton;
     @FXML private Label subtitleLabel;
+    @FXML private StackPane profileAvatarStack;
+    @FXML private Circle profileCircleBg;
+    @FXML private Label profileInitialsLabel;
+    @FXML private ImageView profileImageView;
 
     // --- Inputs ---
     @FXML private Slider sleepSlider;
@@ -128,20 +137,31 @@ public class HealthLensController {
         setupKeyboardShortcut();
         updateGoalLabels();
         applyThemeWhenSceneReady();
+        setupProfileAvatar();
 
         // Show an initial snapshot on load
         handleUpdate();
     }
 
+    /** Set once a user logs in/signs up; used to key per-user profile preferences. */
+    private String currentUsername;
+    private String currentEmail;
+
     /**
-     * Called by GuideController right after loading this screen, if the user
-     * came in through Login -> Guide -> HealthLens. Demonstrates passing
-     * data between scenes: the username typed at login ends up here.
+     * Called by GuideController right after loading this screen, if the
+     * user came in through Login/Signup -> Guide -> HealthLens. Demonstrates
+     * passing data between scenes: the username and email typed earlier end
+     * up here, and are used to load this user's saved profile picture and
+     * background image (if any were set previously).
      */
-    public void setWelcomeMessage(String userName) {
+    public void initSession(String userName, String userEmail) {
+        this.currentUsername = userName;
+        this.currentEmail = userEmail;
         if (userName != null && !userName.isBlank()) {
             subtitleLabel.setText("Welcome back, " + userName + "! Your daily health habits, visualized.");
         }
+        setupProfileAvatar();
+        applyCustomBackgroundIfAny();
     }
 
     // ===================== BACKGROUND IMAGE =====================
@@ -256,6 +276,121 @@ public class HealthLensController {
         scene.getStylesheets().clear();
         scene.getStylesheets().add(getClass().getResource(stylesheet).toExternalForm());
         themeToggleButton.setText(darkMode ? "☀" : "🌙");
+    }
+
+    // ===================== PROFILE (AVATAR / EMAIL / BACKGROUND) =====================
+
+    private void setupProfileAvatar() {
+        Circle clip = new Circle(17, 17, 17);
+        profileImageView.setClip(clip);
+        profileCircleBg.setFill(Color.web("#0ea5a1"));
+
+        String initial = (currentUsername != null && !currentUsername.isBlank())
+                ? currentUsername.substring(0, 1).toUpperCase() : "?";
+        profileInitialsLabel.setText(initial);
+
+        String savedPicturePath = currentUsername == null ? null
+                : prefs.get("profile." + currentUsername + ".picturePath", null);
+        if (savedPicturePath != null && new File(savedPicturePath).exists()) {
+            profileImageView.setImage(new Image(new File(savedPicturePath).toURI().toString()));
+            profileImageView.setVisible(true);
+            profileInitialsLabel.setVisible(false);
+        } else {
+            profileImageView.setVisible(false);
+            profileInitialsLabel.setVisible(true);
+        }
+    }
+
+    private void applyCustomBackgroundIfAny() {
+        if (currentUsername == null) {
+            return;
+        }
+        String savedBackgroundPath = prefs.get("profile." + currentUsername + ".backgroundPath", null);
+        if (savedBackgroundPath != null && new File(savedBackgroundPath).exists()) {
+            backgroundImageView.setImage(new Image(new File(savedBackgroundPath).toURI().toString()));
+        }
+    }
+
+    @FXML
+    private void handleOpenProfile() {
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.setTitle("Your Profile");
+        dialog.setHeaderText(currentUsername == null ? "Profile" : "Signed in as " + currentUsername);
+        dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
+        dialog.getDialogPane().getStylesheets().add(
+                getClass().getResource(darkMode ? "styles-dark.css" : "styles.css").toExternalForm());
+
+        GridPane grid = new GridPane();
+        grid.setHgap(12);
+        grid.setVgap(14);
+        grid.setPadding(new Insets(16));
+
+        // --- profile picture ---
+        ImageView previewView = new ImageView();
+        previewView.setFitWidth(60);
+        previewView.setFitHeight(60);
+        previewView.setClip(new Circle(30, 30, 30));
+        if (profileImageView.getImage() != null) {
+            previewView.setImage(profileImageView.getImage());
+        }
+        Button changePictureButton = new Button("Change Picture...");
+        changePictureButton.getStyleClass().add("reset-button");
+        changePictureButton.setOnAction(e -> {
+            File file = chooseImageFile("Choose a profile picture");
+            if (file != null && currentUsername != null) {
+                prefs.put("profile." + currentUsername + ".picturePath", file.getAbsolutePath());
+                previewView.setImage(new Image(file.toURI().toString()));
+                setupProfileAvatar();
+            }
+        });
+        grid.add(new Label("Profile picture:"), 0, 0);
+        grid.add(new HBox(10, previewView, changePictureButton), 1, 0);
+
+        // --- email ---
+        TextField emailField = new TextField(currentEmail == null ? "" : currentEmail);
+        emailField.setPrefWidth(200);
+        Button saveEmailButton = new Button("Save");
+        saveEmailButton.getStyleClass().add("reset-button");
+        saveEmailButton.setOnAction(e -> {
+            if (currentUsername != null) {
+                currentEmail = emailField.getText();
+                prefs.put("user." + currentUsername + ".email", currentEmail);
+                Alert confirm = new Alert(Alert.AlertType.INFORMATION);
+                confirm.setTitle("Email updated");
+                confirm.setHeaderText(null);
+                confirm.setContentText("Your email has been updated.");
+                confirm.showAndWait();
+            }
+        });
+        grid.add(new Label("Email:"), 0, 1);
+        grid.add(new HBox(10, emailField, saveEmailButton), 1, 1);
+
+        // --- background image ---
+        Button changeBackgroundButton = new Button("Change Background Image...");
+        changeBackgroundButton.getStyleClass().add("reset-button");
+        changeBackgroundButton.setOnAction(e -> {
+            File file = chooseImageFile("Choose a background image");
+            if (file != null) {
+                backgroundImageView.setImage(new Image(file.toURI().toString()));
+                if (currentUsername != null) {
+                    prefs.put("profile." + currentUsername + ".backgroundPath", file.getAbsolutePath());
+                }
+            }
+        });
+        grid.add(new Label("Background image:"), 0, 2);
+        grid.add(changeBackgroundButton, 1, 2);
+
+        dialog.getDialogPane().setContent(grid);
+        dialog.showAndWait();
+    }
+
+    private File chooseImageFile(String title) {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle(title);
+        fileChooser.getExtensionFilters().add(
+                new FileChooser.ExtensionFilter("Image Files", "*.png", "*.jpg", "*.jpeg", "*.gif"));
+        Stage stage = (Stage) profileAvatarStack.getScene().getWindow();
+        return fileChooser.showOpenDialog(stage);
     }
 
     // ===================== SETTINGS DIALOG (CUSTOM GOALS) =====================

@@ -1,5 +1,6 @@
 package com.healthlens.auth;
 
+import com.healthlens.Main;
 import com.healthlens.guide.GuideController;
 
 import javafx.fxml.FXML;
@@ -19,20 +20,21 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.prefs.Preferences;
 
 /**
  * CONTROLLER for Login.fxml.
  *
- * Demonstrates: PasswordField (+ a "show password" toggle built from an
- * overlapping TextField), TextField Enter-key handling, Alert dialogs
- * (Error type on bad login), and Scene Switching (on success, swaps the
- * Stage's scene to Guide.fxml and passes the username across).
+ * Accounts are stored in java.util.prefs.Preferences as
+ * "user.<username>.passwordHash" and "user.<username>.email" — this is the
+ * same store SignupController writes to, so accounts created via Sign Up
+ * work here immediately. On first-ever run, if no accounts exist yet, the
+ * original demo account (from credentials.txt) is seeded in automatically
+ * so the app still works out of the box for grading/testing.
  *
- * NOTE ON SECURITY: credentials.txt is a plain-text file bundled into the
- * app's resources. That's fine for a class assignment demo, but it is NOT
- * how real authentication should work — anyone with the built app could
- * open the jar and read the password. A real app would check credentials
- * against a server, and never ship the correct password inside the client.
+ * NOTE ON SECURITY: this is still a local, single-machine account store
+ * (Preferences lives on this computer only) with hashed-but-unsalted
+ * passwords — appropriate for a class project, not for a real product.
  */
 public class LoginController {
 
@@ -41,14 +43,16 @@ public class LoginController {
     @FXML private TextField passwordVisibleField;
     @FXML private Button toggleVisibilityButton;
     @FXML private Button loginButton;
+    @FXML private Button signupButton;
     @FXML private Label errorLabel;
 
     private boolean passwordVisible = false;
+    private final Preferences prefs = Preferences.userNodeForPackage(Main.class);
 
     @FXML
     public void initialize() {
-        // Keep the hidden and visible password fields in sync with each other.
         passwordVisibleField.textProperty().bindBidirectional(passwordField.textProperty());
+        seedDemoAccountIfNeeded();
     }
 
     @FXML
@@ -66,8 +70,8 @@ public class LoginController {
         String username = usernameField.getText() == null ? "" : usernameField.getText().trim();
         String password = passwordField.getText() == null ? "" : passwordField.getText();
 
-        Map<String, String> credentials = loadCredentials();
-        boolean valid = username.equals(credentials.get("username")) && password.equals(credentials.get("password"));
+        String storedHash = prefs.get("user." + username + ".passwordHash", null);
+        boolean valid = storedHash != null && storedHash.equals(PasswordUtil.hash(password));
 
         if (!valid) {
             errorLabel.setText("Incorrect username or password. Please try again.");
@@ -82,11 +86,40 @@ public class LoginController {
             return;
         }
 
-        goToGuide(username);
+        String email = prefs.get("user." + username + ".email", "");
+        goToGuide(username, email);
     }
 
-    /** Reads username=... / password=... lines out of credentials.txt. */
-    private Map<String, String> loadCredentials() {
+    @FXML
+    private void handleGoToSignup() {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/healthlens/auth/Signup.fxml"));
+            Parent signupRoot = loader.load();
+            Scene scene = new Scene(signupRoot, 420, 620);
+            scene.getStylesheets().add(getClass().getResource("/com/healthlens/styles.css").toExternalForm());
+            Stage stage = (Stage) signupButton.getScene().getWindow();
+            stage.setTitle("HealthLens — Sign Up");
+            stage.setScene(scene);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    /** One-time migration: if no accounts exist yet, seed the original demo login from credentials.txt. */
+    private void seedDemoAccountIfNeeded() {
+        Map<String, String> demo = loadDemoCredentialsFile();
+        String demoUsername = demo.get("username");
+        String demoPassword = demo.get("password");
+        if (demoUsername == null || demoPassword == null) {
+            return;
+        }
+        if (prefs.get("user." + demoUsername + ".passwordHash", null) == null) {
+            prefs.put("user." + demoUsername + ".passwordHash", PasswordUtil.hash(demoPassword));
+            prefs.put("user." + demoUsername + ".email", "samin@example.com");
+        }
+    }
+
+    private Map<String, String> loadDemoCredentialsFile() {
         Map<String, String> map = new HashMap<>();
         try (InputStream is = getClass().getResourceAsStream("credentials.txt");
              BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
@@ -103,13 +136,13 @@ public class LoginController {
         return map;
     }
 
-    /** SCENE SWITCH #1: Login -> Guide, passing the username along. */
-    private void goToGuide(String username) {
+    /** SCENE SWITCH: Login -> Guide, passing username + email along. */
+    private void goToGuide(String username, String email) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/healthlens/guide/Guide.fxml"));
             Parent guideRoot = loader.load();
             GuideController guideController = loader.getController();
-            guideController.setUserName(username);
+            guideController.setSession(username, email);
 
             Scene guideScene = new Scene(guideRoot, 780, 620);
             guideScene.getStylesheets().add(getClass().getResource("/com/healthlens/styles.css").toExternalForm());

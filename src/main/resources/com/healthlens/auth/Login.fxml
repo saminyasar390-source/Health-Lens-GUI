@@ -42,6 +42,9 @@
         <Button fx:id="loginButton" mnemonicParsing="false" onAction="#handleLogin"
                 styleClass="primary-button" text="Log In" />
 
+        <Button fx:id="signupButton" mnemonicParsing="false" onAction="#handleGoToSignup"
+                styleClass="reset-button" text="Don't have an account? Sign Up" />
+
         <Label styleClass="hint-label" text="Hint (for this demo): username 'samin', password 'healthlens123'" wrapText="true" />
     </VBox>
 </StackPane>

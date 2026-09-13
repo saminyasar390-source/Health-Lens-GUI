@@ -1,3 +1,5 @@
 com\healthlens\auth\LoginController.class
 com\healthlens\model\Person.class
+com\healthlens\auth\PasswordUtil.class
 com\healthlens\guide\GuideController.class
+com\healthlens\auth\SignupController.class

@@ -75,6 +75,7 @@ public class GuideController implements Initializable {
 
     // --- page 3 ---
     @FXML private ComboBox<String> countryCombo;
+    @FXML private TextField otherCountryField;
     @FXML private ColorPicker accentColorPicker;
     @FXML private Label colorDemoLabel;
     @FXML private DatePicker startDatePicker;
@@ -113,10 +114,12 @@ public class GuideController implements Initializable {
     private List<VBox> pages;
     private int currentPageIndex = 0;
     private String userName;
+    private String userEmail;
 
-    /** Called by LoginController right after loading this FXML. */
-    public void setUserName(String userName) {
+    /** Called by LoginController/SignupController right after loading this FXML. */
+    public void setSession(String userName, String userEmail) {
         this.userName = userName;
+        this.userEmail = userEmail;
         if (userName != null && !userName.isBlank()) {
             welcomeLabel.setText("Welcome, " + userName + "!");
         }
@@ -192,7 +195,7 @@ public class GuideController implements Initializable {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/healthlens/HealthLens.fxml"));
             Parent healthLensRoot = loader.load();
             HealthLensController controller = loader.getController();
-            controller.setWelcomeMessage(userName);
+            controller.initSession(userName, userEmail);
 
             Scene scene = new Scene(healthLensRoot, 1050, 700);
             scene.getStylesheets().add(getClass().getResource("/com/healthlens/styles.css").toExternalForm());
@@ -291,6 +294,11 @@ public class GuideController implements Initializable {
     private void setupPreferences() {
         countryCombo.setItems(FXCollections.observableArrayList(
                 "Bangladesh", "United States", "United Kingdom", "Canada", "Other"));
+        countryCombo.setOnAction(e -> {
+            boolean isOther = "Other".equals(countryCombo.getValue());
+            otherCountryField.setVisible(isOther);
+            otherCountryField.setManaged(isOther);
+        });
 
         accentColorPicker.setOnAction(e -> {
             javafx.scene.paint.Color c = accentColorPicker.getValue();
