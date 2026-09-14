@@ -255,3 +255,14 @@
 .wizard-nav {
     -fx-background-color: transparent;
 }
+
+/* ===================== REMINDER BANNER ===================== */
+
+.reminder-banner {
+    -fx-background-color: rgba(45, 212, 191, 0.18);
+    -fx-text-fill: #5eead4;
+    -fx-background-radius: 8;
+    -fx-padding: 8 14;
+    -fx-font-size: 12.5px;
+    -fx-font-weight: 600;
+}

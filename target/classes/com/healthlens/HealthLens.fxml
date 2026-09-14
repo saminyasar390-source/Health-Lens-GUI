@@ -43,6 +43,7 @@
 
         <!-- ===================== TOP: TITLE + THEME/SETTINGS BUTTONS ===================== -->
         <top>
+            <VBox BorderPane.alignment="CENTER">
             <BorderPane styleClass="title-box" BorderPane.alignment="CENTER">
                 <center>
                     <VBox alignment="CENTER" spacing="2.0" BorderPane.alignment="CENTER">
@@ -78,9 +79,17 @@
                                 <Tooltip text="Tell the assistant about your day and it fills in the dashboard" />
                             </tooltip>
                         </Button>
+                        <Button fx:id="concurrencyLabButton" mnemonicParsing="false" onAction="#handleOpenConcurrencyLab"
+                                styleClass="icon-button" text="🧵">
+                            <tooltip>
+                                <Tooltip text="Concurrency Lab — threads, race conditions, executors" />
+                            </tooltip>
+                        </Button>
                     </HBox>
                 </right>
             </BorderPane>
+            <Label fx:id="reminderBanner" managed="false" styleClass="reminder-banner" text="" visible="false" wrapText="true" />
+            </VBox>
         </top>
 
         <!-- ===================== CENTER: FORM (left) + VISUALS (right) ===================== -->
@@ -146,6 +155,15 @@
                                 <Tooltip text="1 = very calm, 10 = extremely stressed" />
                             </tooltip>
                         </Slider>
+                        <HBox alignment="CENTER_LEFT" spacing="8.0">
+                            <Button fx:id="breathingButton" mnemonicParsing="false" onAction="#handleToggleBreathing"
+                                    styleClass="reset-button" text="🧘 Guided Breathing">
+                                <tooltip>
+                                    <Tooltip text="A short breathing exercise, running on its own background thread" />
+                                </tooltip>
+                            </Button>
+                            <Label fx:id="breathingStatusLabel" styleClass="value-label" />
+                        </HBox>
                     </VBox>
 
                     <!-- Mood -->
@@ -164,6 +182,13 @@
                             </tooltip>
                         </Button>
                     </HBox>
+
+                    <Button fx:id="syncButton" mnemonicParsing="false" onAction="#handleSyncWithDevice"
+                            styleClass="reset-button" text="🔄 Sync All Sources">
+                        <tooltip>
+                            <Tooltip text="Fetches from smartwatch, pedometer, and water log in parallel (ExecutorService + Callable + Future)" />
+                        </tooltip>
+                    </Button>
 
                     <Label styleClass="hint-label" text="Tip: press Enter to update the dashboard" />
 

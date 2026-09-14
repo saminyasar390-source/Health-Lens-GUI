@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.Tab?>
+<?import javafx.scene.control.TabPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<TabPane fx:id="labRoot" prefHeight="560.0" prefWidth="620.0" styleClass="root-pane" tabClosingPolicy="UNAVAILABLE"
+         xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+         fx:controller="com.healthlens.concurrency.ConcurrencyLabController">
+
+    <!-- ===================== TAB 1: DEVICE CONNECTIONS ===================== -->
+    <Tab text="Device Connections">
+        <VBox spacing="12.0" styleClass="guide-page">
+            <Label styleClass="section-label" text="Connecting to a fitness device (two ways to create the connection thread)" wrapText="true" />
+            <HBox alignment="CENTER_LEFT" spacing="10.0">
+                <Button onAction="#handleStartExtendedThread" styleClass="reset-button" text="Connect via extends Thread" />
+                <Label fx:id="extendedThreadStateLabel" styleClass="value-label" text="State: —" />
+            </HBox>
+            <HBox alignment="CENTER_LEFT" spacing="10.0">
+                <Button onAction="#handleStartRunnableThread" styleClass="reset-button" text="Connect via Runnable" />
+                <Label fx:id="runnableThreadStateLabel" styleClass="value-label" text="State: —" />
+            </HBox>
+            <Separator />
+            <Label styleClass="section-label" text="Guided breathing session (sleep(), join(), cooperative interrupt())" wrapText="true" />
+            <HBox spacing="10.0">
+                <Button onAction="#handleStartCountdown" styleClass="primary-button" text="Start Session" />
+                <Button onAction="#handleCancelCountdown" styleClass="reset-button" text="Stop Early (interrupt)" />
+            </HBox>
+            <ListView fx:id="countdownLogList" prefHeight="140.0" styleClass="chat-log" />
+        </VBox>
+    </Tab>
+
+    <!-- ===================== TAB 2: MULTI-DEVICE STEP SYNC ===================== -->
+    <Tab text="Multi-Device Step Sync">
+        <VBox spacing="14.0" styleClass="guide-page">
+            <Label styleClass="section-label" text="Two fitness trackers (phone + watch) both syncing your step count to the same shared total at once. Expected combined total after 100,000 steps logged by each: 200,000." wrapText="true" />
+            <Button onAction="#handleRunUnsafeCounter" styleClass="reset-button" text="Sync WITHOUT protection (unsafe)" />
+            <Label fx:id="unsafeResultLabel" styleClass="value-label" text="Result: —" />
+            <Separator />
+            <Button onAction="#handleRunSafeCounter" styleClass="primary-button" text="Sync WITH synchronized protection" />
+            <Label fx:id="safeResultLabel" styleClass="value-label" text="Result: —" />
+            <Label styleClass="hint-label" text="Run the unprotected sync a few times — the lost steps won't show up every run, which is exactly why this kind of bug is so easy to miss and so important to prevent with real synchronization." wrapText="true" />
+        </VBox>
+    </Tab>
+
+    <!-- ===================== TAB 3: HEALTH TIP NOTIFICATIONS ===================== -->
+    <Tab text="Health Tip Notifications">
+        <VBox spacing="14.0" styleClass="guide-page">
+            <Label styleClass="section-label" text="This is the exact pattern (a one-slot Box, coordinated with wait()/notifyAll()) that powers HealthLens's real reminder banner on the dashboard." wrapText="true" />
+            <Button onAction="#handleStartProducerConsumer" styleClass="primary-button" text="Start Tip Generator &amp; Notifier" />
+            <Label fx:id="boxStatusLabel" styleClass="value-label" text="Box: [empty]" />
+            <ListView fx:id="pcLogList" prefHeight="180.0" styleClass="chat-log" />
+        </VBox>
+    </Tab>
+
+    <!-- ===================== TAB 4: PARALLEL DATA SYNC ===================== -->
+    <Tab text="Parallel Data Sync">
+        <VBox spacing="12.0" styleClass="guide-page">
+            <Label styleClass="section-label" text="This is the same pattern behind the dashboard's real &quot;Sync All Sources&quot; button — a thread pool fetching from several sources at once." wrapText="true" />
+            <Button onAction="#handleSubmitPoolTasks" styleClass="reset-button" text="Simulate 5 Requests on a 2-Worker Pool" />
+            <ListView fx:id="poolLogList" prefHeight="120.0" styleClass="chat-log" />
+            <Separator />
+            <Label styleClass="section-label" text="Callable + Future: fetch a value while doing other work" wrapText="true" />
+            <Button onAction="#handleRunCallable" styleClass="reset-button" text="Fetch Weekly Step Total via Callable" />
+            <Label fx:id="callableStatusLabel" styleClass="value-label" text="Status: —" />
+            <Separator />
+            <Label styleClass="section-label" text="Graceful shutdown" />
+            <Button onAction="#handleShutdownExecutor" styleClass="reset-button" text="Shutdown Sync Pool" />
+            <Label fx:id="shutdownStatusLabel" styleClass="value-label" text="Status: running" />
+        </VBox>
+    </Tab>
+
+</TabPane>
