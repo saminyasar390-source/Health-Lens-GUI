@@ -34,6 +34,7 @@ import javafx.scene.control.Slider;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.SpinnerValueFactory;
 import javafx.scene.control.TextField;
+import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
@@ -153,6 +154,7 @@ public class HealthLensController {
         updateGoalLabels();
         applyThemeWhenSceneReady();
         setupProfileAvatar();
+        Tooltip.install(profileAvatarStack, new Tooltip("Your profile — click to change picture, email, or background"));
         setupReminderScheduler();
 
         // Show an initial snapshot on load
