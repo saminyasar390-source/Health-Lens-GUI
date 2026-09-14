@@ -57,9 +57,6 @@
                             <Circle fx:id="profileCircleBg" radius="17.0" styleClass="profile-circle-bg" />
                             <Label fx:id="profileInitialsLabel" styleClass="profile-initials" text="?" />
                             <ImageView fx:id="profileImageView" fitHeight="34.0" fitWidth="34.0" visible="false" />
-                            <tooltip>
-                                <Tooltip text="Your profile — click to change picture, email, or background" />
-                            </tooltip>
                         </StackPane>
                         <Button fx:id="themeToggleButton" mnemonicParsing="false" onAction="#handleToggleTheme"
                                 styleClass="icon-button" text="🌙">
