@@ -65,6 +65,17 @@ public class LoginController {
         toggleVisibilityButton.setText(passwordVisible ? "Hide password" : "Show password");
     }
 
+    /** QoL: pressing Enter in the username field moves focus straight to the password field,
+     *  instead of doing nothing, so the user can type both fields without touching the mouse. */
+    @FXML
+    private void handleUsernameEnter() {
+        if (passwordVisible) {
+            passwordVisibleField.requestFocus();
+        } else {
+            passwordField.requestFocus();
+        }
+    }
+
     @FXML
     private void handleLogin() {
         String username = usernameField.getText() == null ? "" : usernameField.getText().trim();
