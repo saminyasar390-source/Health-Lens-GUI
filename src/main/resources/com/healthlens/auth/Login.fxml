@@ -22,7 +22,7 @@
 
         <VBox spacing="4.0">
             <Label styleClass="control-label" text="Username" />
-            <TextField fx:id="usernameField" promptText="Enter username" />
+            <TextField fx:id="usernameField" promptText="Enter username" onAction="#handleUsernameEnter" />
         </VBox>
 
         <VBox spacing="4.0">
@@ -41,6 +41,9 @@
 
         <Button fx:id="loginButton" mnemonicParsing="false" onAction="#handleLogin"
                 styleClass="primary-button" text="Log In" />
+
+        <Button fx:id="signupButton" mnemonicParsing="false" onAction="#handleGoToSignup"
+                styleClass="reset-button" text="Don't have an account? Sign Up" />
 
         <Label styleClass="hint-label" text="Hint (for this demo): username 'samin', password 'healthlens123'" wrapText="true" />
     </VBox>

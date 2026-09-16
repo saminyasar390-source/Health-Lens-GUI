@@ -110,6 +110,7 @@
                 <VBox spacing="4.0">
                     <Label styleClass="control-label" text="Country" />
                     <ComboBox fx:id="countryCombo" prefWidth="220.0" />
+                    <TextField fx:id="otherCountryField" managed="false" promptText="Enter your country" visible="false" />
                 </VBox>
                 <VBox spacing="4.0">
                     <Label styleClass="control-label" text="Pick an accent color" />

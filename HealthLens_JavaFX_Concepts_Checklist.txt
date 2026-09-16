@@ -1,0 +1,126 @@
+HealthLens - JavaFX Concepts Checklist
+========================================
+Audit of required course concepts vs. what is implemented in the project.
+
+
+A. THEORETICAL CONCEPTS
+------------------------
+[x] Stage, Scene, and Scene Graph
+    -> Main.java, and every scene switch (Login -> Guide -> HealthLens, Login <-> Signup)
+
+[x] MVC Pattern
+    -> model/ package (HealthData, ScoreCalculator, ScoreResult) + FXML views + Controllers
+
+[x] FXML Loader
+    -> Used in Main, LoginController, SignupController, GuideController
+
+
+B. REVIEW TASKS
+------------------------
+[!] Scene Setup: 400x300 window with "Welcome to JavaFX!" label
+    -> NOT present as its own isolated exercise. The underlying technique
+       (Stage + Scene + Label) is used constantly elsewhere, but there is no
+       standalone throwaway window matching this exact spec.
+
+[x] Layout Practice: HBox, VBox, FlowPane, StackPane, BorderPane
+    -> All five used. FlowPane specifically lives on Guide page 1 (badge tags).
+
+[x] FXML + Controller (Scene Builder workflow)
+    -> Every screen in the project
+
+[x] Button Actions defined in FXML (onAction)
+    -> Used throughout (Update, Reset, Theme, Settings, Chat, Login, Signup, etc.)
+
+[x] Scene Switching (two FXML pages, button switches between them)
+    -> Login -> Guide -> HealthLens, plus Login <-> Signup
+
+[x] Passing Data Between Scenes
+    -> Username and email are passed through Login/Signup -> Guide -> HealthLens
+
+
+C. NEW TOPICS
+------------------------
+[x] TableView + ObservableList + Person model
+    -> Guide page 6 (sample users table)
+
+[x] ImageView + "Change Image" button
+    -> Guide page 10 (profile picture), plus HealthLens profile menu
+       (change picture, change background)
+
+[x] Event Handling from Code
+    -> Button.setOnAction() in Java: chat window Send button, dialog buttons,
+       profile menu buttons
+    -> TextField Enter-key event: login password field, chat input field
+
+[x] Initializable Interface
+    -> GuideController implements javafx.fxml.Initializable directly
+    NOTE: HealthLensController, LoginController, and SignupController all use
+    the newer "@FXML public void initialize()" shortcut instead, which does
+    the same job but is technically a different pattern from the literal
+    interface. Only GuideController demonstrates the literal interface.
+
+[x] RadioButton
+    -> Guide page 2 (experience level: Beginner/Intermediate/Expert)
+
+[x] ToggleGroup
+    -> Same RadioButtons on Guide page 2 share one ToggleGroup
+
+[x] CheckBox
+    -> Guide page 2 (interests: Sleep/Water/Exercise/Stress/Mood + Submit)
+
+[x] ChoiceBox
+    -> Mood picker on the HealthLens dashboard
+
+[x] ComboBox
+    -> Guide page 3 (country selector, including a custom "Other" text field)
+
+[x] DatePicker
+    -> Guide page 3 (health journey start date, with date formatter)
+
+[x] ColorPicker
+    -> Guide page 3 (accent color demo)
+
+[x] ListView
+    -> Guide page 4 (health tips), plus the HealthLens chat assistant log
+
+[x] TreeView
+    -> Guide page 5 (HealthLens feature categories)
+
+[x] ProgressBar
+    -> HealthLens dashboard (sleep/water/exercise/stress bars), plus Guide
+       page 9 (Accumulate button exercise)
+
+[x] Slider
+    -> HealthLens dashboard sliders, plus Guide page 8 (font size control)
+
+[x] Spinner
+    -> Settings dialog on HealthLens (goal values: sleep/water/exercise/stress)
+
+[x] MenuBar
+    -> Guide's top bar (File -> New/Open/Exit)
+
+[x] Alert Dialogs (Information, Warning, Error)
+    -> All three types demonstrated with dedicated buttons on Guide page 1
+    -> Also used contextually: Error on failed login, Warning on an empty
+       goal field, Confirmation when finishing the Guide
+
+[x] TextArea
+    -> Guide page 7 (personal health goal) + Clear button
+
+[x] PasswordField
+    -> Login and Signup screens, both with a "Show/Hide password" toggle
+
+[x] FileChooser
+    -> Guide page 10 (profile picture), HealthLens profile menu
+       (picture + background image)
+
+[x] Event-driven programming (paradigm)
+    -> The entire application
+
+
+SUMMARY
+------------------------
+Fully covered: 30 / 32 items
+Partial / not literal: 1 item (the isolated 400x300 "Welcome to JavaFX!" demo)
+Minor nuance: 1 item (Initializable interface used literally in only one
+of four controllers; the rest use the equivalent @FXML initialize() shortcut)

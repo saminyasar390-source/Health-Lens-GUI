@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.PasswordField?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+
+<StackPane fx:id="signupRoot" prefHeight="620.0" prefWidth="420.0" styleClass="root-pane"
+           xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+           fx:controller="com.healthlens.auth.SignupController">
+
+    <VBox alignment="CENTER" spacing="12.0" styleClass="overlay-pane" maxWidth="360.0">
+        <padding>
+            <Insets bottom="28.0" left="28.0" right="28.0" top="28.0" />
+        </padding>
+
+        <Label styleClass="title-label" text="Create Account" />
+        <Label styleClass="subtitle-label" text="Sign up, then verify your email to get started" />
+
+        <!-- ===== Section 1: account details ===== -->
+        <VBox fx:id="detailsSection" spacing="10.0">
+            <VBox spacing="4.0">
+                <Label styleClass="control-label" text="Username" />
+                <TextField fx:id="usernameField" promptText="Choose a username" />
+            </VBox>
+            <VBox spacing="4.0">
+                <Label styleClass="control-label" text="Email" />
+                <TextField fx:id="emailField" promptText="you@example.com" />
+            </VBox>
+            <VBox spacing="4.0">
+                <Label styleClass="control-label" text="Password" />
+                <PasswordField fx:id="passwordField" promptText="At least 6 characters" />
+            </VBox>
+            <VBox spacing="4.0">
+                <Label styleClass="control-label" text="Confirm Password" />
+                <PasswordField fx:id="confirmPasswordField" promptText="Re-enter password" />
+            </VBox>
+            <Button fx:id="sendCodeButton" mnemonicParsing="false" onAction="#handleSendCode"
+                    styleClass="primary-button" text="Send Verification Code" />
+        </VBox>
+
+        <!-- ===== Section 2: verification code (hidden until a code is sent) ===== -->
+        <VBox fx:id="verifySection" managed="false" spacing="10.0" visible="false">
+            <Label styleClass="hint-label" text="Check your email for a 6-digit code (or the popup, if email isn't configured yet)." wrapText="true" />
+            <TextField fx:id="codeField" promptText="Enter 6-digit code" />
+            <Button fx:id="verifyButton" mnemonicParsing="false" onAction="#handleVerifyCode"
+                    styleClass="primary-button" text="Verify &amp; Create Account" />
+            <Button fx:id="resendButton" mnemonicParsing="false" onAction="#handleSendCode"
+                    styleClass="reset-button" text="Resend code" />
+        </VBox>
+
+        <Label fx:id="statusLabel" managed="false" styleClass="error-label" text="" visible="false" wrapText="true" />
+
+        <Button fx:id="backToLoginButton" mnemonicParsing="false" onAction="#handleBackToLogin"
+                styleClass="reset-button" text="← Back to Login" />
+    </VBox>
+</StackPane>
