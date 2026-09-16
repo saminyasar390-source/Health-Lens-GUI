@@ -310,3 +310,17 @@
     -fx-font-size: 12.5px;
     -fx-font-weight: 600;
 }
+
+/* ===================== ACTIVITY MONITOR WINDOW (solid bg, no image behind it) ===================== */
+
+.lab-window {
+    -fx-background-color: #f4f6f8;
+}
+
+.lab-window .tab-pane .tab-header-area .tab {
+    -fx-background-color: #e2e8f0;
+}
+
+.lab-window .tab-pane .tab:selected {
+    -fx-background-color: #f4f6f8;
+}

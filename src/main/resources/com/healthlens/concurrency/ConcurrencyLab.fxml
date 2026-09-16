@@ -10,7 +10,7 @@
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
 
-<TabPane fx:id="labRoot" prefHeight="560.0" prefWidth="620.0" styleClass="root-pane" tabClosingPolicy="UNAVAILABLE"
+<TabPane fx:id="labRoot" prefHeight="560.0" prefWidth="620.0" styleClass="lab-window" tabClosingPolicy="UNAVAILABLE"
          xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
          fx:controller="com.healthlens.concurrency.ConcurrencyLabController">
 

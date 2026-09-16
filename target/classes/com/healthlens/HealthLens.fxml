@@ -77,9 +77,9 @@
                             </tooltip>
                         </Button>
                         <Button fx:id="concurrencyLabButton" mnemonicParsing="false" onAction="#handleOpenConcurrencyLab"
-                                styleClass="icon-button" text="🧵">
+                                styleClass="icon-button" text="📡">
                             <tooltip>
-                                <Tooltip text="Concurrency Lab — threads, race conditions, executors" />
+                                <Tooltip text="Activity Monitor — see device syncing and notifications running in the background" />
                             </tooltip>
                         </Button>
                     </HBox>

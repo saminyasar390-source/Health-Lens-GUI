@@ -491,7 +491,7 @@ public class HealthLensController {
                     getClass().getResource(darkMode ? "styles-dark.css" : "styles.css").toExternalForm());
 
             Stage labStage = new Stage();
-            labStage.setTitle("Concurrency Lab");
+            labStage.setTitle("HealthLens — Activity Monitor");
             labStage.setScene(labScene);
             labStage.setOnCloseRequest(e -> labController.shutdown());
             labStage.show();
