@@ -1,24 +1,22 @@
 /* ===================== ROOT / BACKGROUND ===================== */
 
 .root-pane {
-    /* Fallback background used only if background.jpg is missing */
-    -fx-background-color: linear-gradient(to bottom right, #2b3a55, #1a2233);
+    -fx-background-color: linear-gradient(to bottom right, #0b1220, #05070c);
 }
 
-/* Dark translucent layer over the background image so text stays readable */
 .scrim-pane {
-    -fx-background-color: rgba(10, 15, 25, 0.35);
+    -fx-background-color: rgba(0, 0, 0, 0.55);
 }
 
 /* ===================== MAIN CARD ===================== */
 
 .overlay-pane {
-    -fx-background-color: rgba(255, 255, 255, 0.90);
+    -fx-background-color: rgba(17, 24, 39, 0.92);
     -fx-background-radius: 18;
     -fx-border-radius: 18;
-    -fx-border-color: rgba(255, 255, 255, 0.5);
+    -fx-border-color: rgba(255, 255, 255, 0.08);
     -fx-border-width: 1;
-    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.35), 24, 0.15, 0, 8);
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.6), 24, 0.15, 0, 8);
     -fx-padding: 20;
 }
 
@@ -29,12 +27,12 @@
 .title-label {
     -fx-font-size: 30px;
     -fx-font-weight: bold;
-    -fx-text-fill: #1e2b3c;
+    -fx-text-fill: #f1f5f9;
 }
 
 .subtitle-label {
     -fx-font-size: 13px;
-    -fx-text-fill: #5b6b7f;
+    -fx-text-fill: #94a3b8;
 }
 
 .content-box {
@@ -43,7 +41,7 @@
 
 .footer-label {
     -fx-font-size: 11px;
-    -fx-text-fill: #8794a3;
+    -fx-text-fill: #64748b;
     -fx-padding: 12 0 0 0;
 }
 
@@ -58,20 +56,26 @@
 .section-label {
     -fx-font-size: 16px;
     -fx-font-weight: bold;
-    -fx-text-fill: #223047;
+    -fx-text-fill: #e2e8f0;
     -fx-padding: 0 0 4 0;
 }
 
 .control-label {
     -fx-font-size: 12.5px;
-    -fx-text-fill: #3a4a5e;
+    -fx-text-fill: #cbd5e1;
     -fx-font-weight: 600;
 }
 
 .value-label {
     -fx-font-size: 12px;
-    -fx-text-fill: #0f766e;
+    -fx-text-fill: #2dd4bf;
     -fx-font-weight: bold;
+}
+
+.hint-label {
+    -fx-font-size: 10.5px;
+    -fx-text-fill: #64748b;
+    -fx-font-style: italic;
 }
 
 .primary-button {
@@ -82,7 +86,7 @@
     -fx-background-radius: 8;
     -fx-padding: 10 18;
     -fx-cursor: hand;
-    -fx-effect: dropshadow(gaussian, rgba(2,132,199,0.4), 10, 0.2, 0, 3);
+    -fx-effect: dropshadow(gaussian, rgba(2,132,199,0.5), 10, 0.2, 0, 3);
 }
 
 .primary-button:hover {
@@ -95,9 +99,9 @@
 
 .reset-button {
     -fx-background-color: transparent;
-    -fx-text-fill: #475569;
-    -fx-font-size: 13px;
-    -fx-border-color: #94a3b8;
+    -fx-text-fill: #cbd5e1;
+    -fx-font-size: 12.5px;
+    -fx-border-color: #475569;
     -fx-border-radius: 8;
     -fx-background-radius: 8;
     -fx-padding: 10 16;
@@ -105,30 +109,26 @@
 }
 
 .reset-button:hover {
-    -fx-background-color: rgba(148, 163, 184, 0.15);
+    -fx-background-color: rgba(148,163,184,0.15);
 }
 
-.hint-label {
-    -fx-font-size: 10.5px;
-    -fx-text-fill: #94a3b8;
-    -fx-font-style: italic;
-}
+/* ===================== ICON BUTTONS ===================== */
 
-/* Small circular icon buttons in the top-right (theme toggle, settings) */
 .icon-button {
-    -fx-background-color: rgba(255, 255, 255, 0.6);
-    -fx-background-radius: 50%;
+    -fx-background-color: rgba(255,255,255,0.08);
+    -fx-background-radius: 20;
     -fx-min-width: 34;
     -fx-min-height: 34;
-    -fx-max-width: 34;
-    -fx-max-height: 34;
     -fx-font-size: 14px;
     -fx-cursor: hand;
-    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 4, 0.1, 0, 1);
+    -fx-border-radius: 20;
+    -fx-border-color: rgba(255,255,255,0.12);
+    -fx-border-width: 1;
+    -fx-text-fill: #e2e8f0;
 }
 
 .icon-button:hover {
-    -fx-background-color: rgba(255, 255, 255, 0.9);
+    -fx-background-color: rgba(255,255,255,0.16);
 }
 
 /* ===================== VISUAL PANEL (RIGHT) ===================== */
@@ -142,25 +142,24 @@
 }
 
 .health-chart .chart-plot-background {
-    -fx-background-color: rgba(240, 245, 250, 0.6);
+    -fx-background-color: rgba(30, 41, 59, 0.6);
 }
 
 .health-chart .axis-label,
 .health-chart .axis-tick-mark,
 .health-chart .axis {
-    -fx-text-fill: #3a4a5e;
-    -fx-tick-label-fill: #3a4a5e;
+    -fx-text-fill: #cbd5e1;
+    -fx-tick-label-fill: #cbd5e1;
 }
 
-/* Bar colors (single-series bar chart) */
 .health-chart .default-color0.chart-bar {
-    -fx-bar-fill: #0ea5a1;
+    -fx-bar-fill: #2dd4bf;
 }
 
 /* ===================== PROGRESS BARS ===================== */
 
 .progress-neutral .bar {
-    -fx-background-color: #94a3b8;
+    -fx-background-color: #64748b;
 }
 
 .progress-good .bar {
@@ -178,7 +177,7 @@
 /* ===================== SUMMARY BOX ===================== */
 
 .summary-box {
-    -fx-background-color: rgba(240, 245, 250, 0.7);
+    -fx-background-color: rgba(30, 41, 59, 0.7);
     -fx-background-radius: 10;
     -fx-padding: 12 14;
 }
@@ -186,110 +185,67 @@
 .overall-score-label {
     -fx-font-size: 15px;
     -fx-font-weight: bold;
-    -fx-text-fill: #223047;
+    -fx-text-fill: #e2e8f0;
 }
 
 .score-good {
-    -fx-text-fill: #16a34a;
+    -fx-text-fill: #4ade80;
 }
 
 .score-medium {
-    -fx-text-fill: #d97706;
+    -fx-text-fill: #fbbf24;
 }
 
 .score-poor {
-    -fx-text-fill: #dc2626;
+    -fx-text-fill: #f87171;
 }
 
 .summary-text {
     -fx-font-size: 12.5px;
-    -fx-text-fill: #334155;
+    -fx-text-fill: #cbd5e1;
 }
 
-/* ===================== NEW: ICON BUTTONS (theme / settings / chat) ===================== */
-
-.icon-button {
-    -fx-background-color: rgba(255,255,255,0.6);
-    -fx-background-radius: 20;
-    -fx-min-width: 34;
-    -fx-min-height: 34;
-    -fx-font-size: 14px;
-    -fx-cursor: hand;
-    -fx-border-radius: 20;
-    -fx-border-color: rgba(0,0,0,0.08);
-    -fx-border-width: 1;
-}
-
-.icon-button:hover {
-    -fx-background-color: rgba(255,255,255,0.9);
-}
-
-/* ===================== NEW: RESET BUTTON ===================== */
-
-.reset-button {
-    -fx-background-color: transparent;
-    -fx-text-fill: #475569;
-    -fx-font-size: 12.5px;
-    -fx-border-color: #94a3b8;
-    -fx-border-radius: 8;
-    -fx-background-radius: 8;
-    -fx-padding: 10 16;
-    -fx-cursor: hand;
-}
-
-.reset-button:hover {
-    -fx-background-color: rgba(148,163,184,0.15);
-}
-
-/* ===================== NEW: HINT TEXT ===================== */
-
-.hint-label {
-    -fx-font-size: 10.5px;
-    -fx-text-fill: #94a3b8;
-    -fx-font-style: italic;
-}
-
-/* ===================== NEW: CHAT ASSISTANT WINDOW ===================== */
+/* ===================== CHAT ASSISTANT WINDOW ===================== */
 
 .chat-window {
-    -fx-background-color: rgba(255, 255, 255, 0.97);
+    -fx-background-color: rgba(17, 24, 39, 0.97);
 }
 
 .chat-log {
-    -fx-background-color: rgba(240, 245, 250, 0.6);
+    -fx-background-color: rgba(30, 41, 59, 0.6);
     -fx-background-radius: 10;
-    -fx-control-inner-background: transparent;
+    -fx-control-inner-background: rgba(30, 41, 59, 0.6);
     -fx-padding: 6;
 }
 
 .chat-bubble-user {
-    -fx-text-fill: #0f172a;
+    -fx-text-fill: #e2e8f0;
     -fx-font-size: 12.5px;
 }
 
 .chat-bubble-bot {
-    -fx-text-fill: #0284c7;
+    -fx-text-fill: #2dd4bf;
     -fx-font-size: 12.5px;
     -fx-font-weight: 600;
 }
 
-/* ===================== NEW: LOGIN ERROR TEXT ===================== */
+/* ===================== LOGIN ERROR TEXT ===================== */
 
 .error-label {
-    -fx-text-fill: #dc2626;
+    -fx-text-fill: #f87171;
     -fx-font-size: 12px;
     -fx-font-weight: 600;
 }
 
-/* ===================== NEW: GUIDE WIZARD ===================== */
+/* ===================== GUIDE WIZARD ===================== */
 
 .guide-page {
     -fx-padding: 24;
 }
 
 .badge-label {
-    -fx-background-color: rgba(14, 165, 161, 0.12);
-    -fx-text-fill: #0f766e;
+    -fx-background-color: rgba(45, 212, 191, 0.15);
+    -fx-text-fill: #5eead4;
     -fx-background-radius: 20;
     -fx-padding: 6 14;
     -fx-font-size: 12.5px;
@@ -300,11 +256,11 @@
     -fx-background-color: transparent;
 }
 
-/* ===================== NEW: REMINDER BANNER ===================== */
+/* ===================== REMINDER BANNER ===================== */
 
 .reminder-banner {
-    -fx-background-color: rgba(14, 165, 161, 0.15);
-    -fx-text-fill: #0f766e;
+    -fx-background-color: rgba(45, 212, 191, 0.18);
+    -fx-text-fill: #5eead4;
     -fx-background-radius: 8;
     -fx-padding: 8 14;
     -fx-font-size: 12.5px;
@@ -314,13 +270,17 @@
 /* ===================== ACTIVITY MONITOR WINDOW (solid bg, no image behind it) ===================== */
 
 .lab-window {
-    -fx-background-color: #f4f6f8;
+    -fx-background-color: #0b1220;
 }
 
 .lab-window .tab-pane .tab-header-area .tab {
-    -fx-background-color: #e2e8f0;
+    -fx-background-color: #1e293b;
 }
 
 .lab-window .tab-pane .tab:selected {
-    -fx-background-color: #f4f6f8;
+    -fx-background-color: #0b1220;
+}
+
+.lab-window .tab-pane .tab .tab-label {
+    -fx-text-fill: #e2e8f0;
 }

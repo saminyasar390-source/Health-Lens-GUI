@@ -10,11 +10,13 @@
 <?import javafx.scene.control.ProgressBar?>
 <?import javafx.scene.control.Separator?>
 <?import javafx.scene.control.Slider?>
+<?import javafx.scene.control.Tooltip?>
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
+<?import javafx.scene.shape.Circle?>
 
 <!--
     ROOT: StackPane so the background ImageView can sit BEHIND everything else.
@@ -39,11 +41,51 @@
             <Insets bottom="28.0" left="28.0" right="28.0" top="28.0" />
         </StackPane.margin>
 
-        <!-- ===================== TOP: TITLE ===================== -->
+        <!-- ===================== TOP: TITLE + THEME/SETTINGS BUTTONS ===================== -->
         <top>
-            <VBox alignment="CENTER" spacing="2.0" styleClass="title-box" BorderPane.alignment="CENTER">
-                <Label styleClass="title-label" text="HealthLens" />
-                <Label styleClass="subtitle-label" text="Your daily health habits, visualized" />
+            <VBox BorderPane.alignment="CENTER">
+            <BorderPane styleClass="title-box" BorderPane.alignment="CENTER">
+                <center>
+                    <VBox alignment="CENTER" spacing="2.0" BorderPane.alignment="CENTER">
+                        <Label styleClass="title-label" text="HealthLens" />
+                        <Label fx:id="subtitleLabel" styleClass="subtitle-label" text="Your daily health habits, visualized" />
+                    </VBox>
+                </center>
+                <right>
+                    <HBox alignment="CENTER_RIGHT" spacing="8.0" BorderPane.alignment="CENTER_RIGHT">
+                        <StackPane fx:id="profileAvatarStack" onMouseClicked="#handleOpenProfile" styleClass="profile-avatar">
+                            <Circle fx:id="profileCircleBg" radius="17.0" styleClass="profile-circle-bg" />
+                            <Label fx:id="profileInitialsLabel" styleClass="profile-initials" text="?" />
+                            <ImageView fx:id="profileImageView" fitHeight="34.0" fitWidth="34.0" visible="false" />
+                        </StackPane>
+                        <Button fx:id="themeToggleButton" mnemonicParsing="false" onAction="#handleToggleTheme"
+                                styleClass="icon-button" text="🌙">
+                            <tooltip>
+                                <Tooltip text="Switch between light and dark theme" />
+                            </tooltip>
+                        </Button>
+                        <Button fx:id="settingsButton" mnemonicParsing="false" onAction="#handleOpenSettings"
+                                styleClass="icon-button" text="⚙">
+                            <tooltip>
+                                <Tooltip text="Customize your daily goals" />
+                            </tooltip>
+                        </Button>
+                        <Button fx:id="chatButton" mnemonicParsing="false" onAction="#handleOpenChat"
+                                styleClass="icon-button" text="💬">
+                            <tooltip>
+                                <Tooltip text="Tell the assistant about your day and it fills in the dashboard" />
+                            </tooltip>
+                        </Button>
+                        <Button fx:id="concurrencyLabButton" mnemonicParsing="false" onAction="#handleOpenConcurrencyLab"
+                                styleClass="icon-button" text="📡">
+                            <tooltip>
+                                <Tooltip text="Activity Monitor — see device syncing and notifications running in the background" />
+                            </tooltip>
+                        </Button>
+                    </HBox>
+                </right>
+            </BorderPane>
+            <Label fx:id="reminderBanner" managed="false" styleClass="reminder-banner" text="" visible="false" wrapText="true" />
             </VBox>
         </top>
 
@@ -59,51 +101,93 @@
                     <!-- Sleep -->
                     <VBox spacing="4.0">
                         <HBox alignment="CENTER_LEFT" spacing="8.0">
-                            <Label styleClass="control-label" text="Sleep (hours)" />
+                            <Label styleClass="control-label" text="🌙 Sleep (hours)" />
                             <Label fx:id="sleepValueLabel" styleClass="value-label" text="7.0 h" />
                         </HBox>
                         <Slider fx:id="sleepSlider" blockIncrement="0.5" majorTickUnit="2"
-                                max="12" min="0" showTickLabels="true" showTickMarks="true" value="7" />
+                                max="12" min="0" showTickLabels="true" showTickMarks="true" value="7">
+                            <tooltip>
+                                <Tooltip text="How many hours did you sleep last night?" />
+                            </tooltip>
+                        </Slider>
                     </VBox>
 
                     <!-- Water -->
                     <VBox spacing="4.0">
                         <HBox alignment="CENTER_LEFT" spacing="8.0">
-                            <Label styleClass="control-label" text="Water (glasses)" />
+                            <Label styleClass="control-label" text="💧 Water (glasses)" />
                             <Label fx:id="waterValueLabel" styleClass="value-label" text="6" />
                         </HBox>
                         <Slider fx:id="waterSlider" blockIncrement="1" majorTickUnit="2"
-                                max="15" min="0" showTickLabels="true" showTickMarks="true" value="6" />
+                                max="15" min="0" showTickLabels="true" showTickMarks="true" value="6">
+                            <tooltip>
+                                <Tooltip text="How many glasses of water have you had today?" />
+                            </tooltip>
+                        </Slider>
                     </VBox>
 
                     <!-- Exercise -->
                     <VBox spacing="4.0">
                         <HBox alignment="CENTER_LEFT" spacing="8.0">
-                            <Label styleClass="control-label" text="Exercise (minutes)" />
+                            <Label styleClass="control-label" text="🏃 Exercise (minutes)" />
                             <Label fx:id="exerciseValueLabel" styleClass="value-label" text="20 min" />
                         </HBox>
                         <Slider fx:id="exerciseSlider" blockIncrement="5" majorTickUnit="30"
-                                max="120" min="0" showTickLabels="true" showTickMarks="true" value="20" />
+                                max="120" min="0" showTickLabels="true" showTickMarks="true" value="20">
+                            <tooltip>
+                                <Tooltip text="How many minutes of exercise today?" />
+                            </tooltip>
+                        </Slider>
                     </VBox>
 
                     <!-- Stress -->
                     <VBox spacing="4.0">
                         <HBox alignment="CENTER_LEFT" spacing="8.0">
-                            <Label styleClass="control-label" text="Stress level (1-10)" />
+                            <Label styleClass="control-label" text="🧠 Stress level (1-10)" />
                             <Label fx:id="stressValueLabel" styleClass="value-label" text="5" />
                         </HBox>
                         <Slider fx:id="stressSlider" blockIncrement="1" majorTickUnit="1"
-                                max="10" min="1" showTickLabels="true" showTickMarks="true" value="5" />
+                                max="10" min="1" showTickLabels="true" showTickMarks="true" value="5">
+                            <tooltip>
+                                <Tooltip text="1 = very calm, 10 = extremely stressed" />
+                            </tooltip>
+                        </Slider>
+                        <HBox alignment="CENTER_LEFT" spacing="8.0">
+                            <Button fx:id="breathingButton" mnemonicParsing="false" onAction="#handleToggleBreathing"
+                                    styleClass="reset-button" text="🧘 Guided Breathing">
+                                <tooltip>
+                                    <Tooltip text="A short breathing exercise, running on its own background thread" />
+                                </tooltip>
+                            </Button>
+                            <Label fx:id="breathingStatusLabel" styleClass="value-label" />
+                        </HBox>
                     </VBox>
 
                     <!-- Mood -->
                     <VBox spacing="4.0">
-                        <Label styleClass="control-label" text="Mood" />
+                        <Label styleClass="control-label" text="🙂 Mood" />
                         <ChoiceBox fx:id="moodChoiceBox" prefWidth="220.0" />
                     </VBox>
 
-                    <Button fx:id="updateButton" mnemonicParsing="false" onAction="#handleUpdate"
-                            styleClass="primary-button" text="Update Dashboard" />
+                    <HBox spacing="10.0">
+                        <Button fx:id="updateButton" mnemonicParsing="false" onAction="#handleUpdate"
+                                styleClass="primary-button" text="Update Dashboard" />
+                        <Button fx:id="resetButton" mnemonicParsing="false" onAction="#handleReset"
+                                styleClass="reset-button" text="Reset">
+                            <tooltip>
+                                <Tooltip text="Reset sliders and mood back to default values" />
+                            </tooltip>
+                        </Button>
+                    </HBox>
+
+                    <Button fx:id="syncButton" mnemonicParsing="false" onAction="#handleSyncWithDevice"
+                            styleClass="reset-button" text="🔄 Sync All Sources">
+                        <tooltip>
+                            <Tooltip text="Fetches from smartwatch, pedometer, and water log in parallel (ExecutorService + Callable + Future)" />
+                        </tooltip>
+                    </Button>
+
+                    <Label styleClass="hint-label" text="Tip: press Enter to update the dashboard" />
 
                 </VBox>
 
@@ -117,19 +201,19 @@
                     <!-- Progress bars -->
                     <VBox spacing="10.0">
                         <VBox spacing="2.0">
-                            <Label styleClass="control-label" text="Sleep goal (8h)" />
+                            <Label fx:id="sleepGoalLabel" styleClass="control-label" text="Sleep goal (8h)" />
                             <ProgressBar fx:id="sleepBar" maxWidth="Infinity" progress="0.0" styleClass="progress-neutral" />
                         </VBox>
                         <VBox spacing="2.0">
-                            <Label styleClass="control-label" text="Water goal (8 glasses)" />
+                            <Label fx:id="waterGoalLabel" styleClass="control-label" text="Water goal (8 glasses)" />
                             <ProgressBar fx:id="waterBar" maxWidth="Infinity" progress="0.0" styleClass="progress-neutral" />
                         </VBox>
                         <VBox spacing="2.0">
-                            <Label styleClass="control-label" text="Exercise goal (30 min)" />
+                            <Label fx:id="exerciseGoalLabel" styleClass="control-label" text="Exercise goal (30 min)" />
                             <ProgressBar fx:id="exerciseBar" maxWidth="Infinity" progress="0.0" styleClass="progress-neutral" />
                         </VBox>
                         <VBox spacing="2.0">
-                            <Label styleClass="control-label" text="Stress control (lower is better)" />
+                            <Label fx:id="stressGoalLabel" styleClass="control-label" text="Stress control (lower is better)" />
                             <ProgressBar fx:id="stressBar" maxWidth="Infinity" progress="0.0" styleClass="progress-neutral" />
                         </VBox>
                     </VBox>

@@ -1,0 +1,119 @@
+HealthLens - Multithreading & Concurrency (Lab 2) Notes
+=========================================================
+Summary of how each Lab 2 concept was implemented, plus a bug that came up
+along the way and how it was fixed.
+
+
+PART 1: CONCEPT -> APPLICATION MAPPING
+=========================================================
+
+Lab 2 Concept                          | Real Dashboard Feature                                              | Concurrency Lab (isolated demo)
+----------------------------------------|----------------------------------------------------------------------|----------------------------------
+Thread creation: extends Thread         | -                                                                    | Tab 1 "Device Connections" - one connect button uses this style
+Thread creation: Runnable               | sync-coordinator, breathing-exercise, tip-generator, tip-notifier    | Tab 1 - the other connect button
+                                         | threads all use this style                                          |
+Thread naming (setName/currentThread)   | Every real background thread is explicitly named (e.g.             | Tab 1, Tab 2 (unsafe-step-sync,
+                                         | "sync-coordinator") so it's identifiable in a thread dump           | safe-step-sync)
+Six thread states / getState()          | -                                                                    | Tab 1 - live-polls and displays
+                                         |                                                                      | NEW -> RUNNABLE -> TERMINATED
+sleep(), join(), cooperative interrupt()| "Guided Breathing" button - real sleep()-paced phases, Stop button  | Tab 1's breathing-session demo
+                                         | calls real interrupt()                                              | (same pattern, isolated)
+Shared resource / race condition /      | (deliberately NOT in the real app - see note at bottom)             | Tab 2 "Multi-Device Step Sync" -
+lost updates                            |                                                                      | UnsafeCounter, live wrong totals
+synchronized method / monitor lock      | Box<T>'s put()/take() methods (used for real)                       | Tab 2's SafeCounter (fixed
+                                         |                                                                      | version, shown side-by-side)
+wait() / notifyAll(), producer-consumer | "Reminder banner" - real tip-generator + tip-notifier threads       | Tab 3 "Health Tip Notifications" -
+                                         | coordinating through Box<String>                                    | same Box class, Box<Integer>
+ExecutorService, fixed thread pool      | "Sync All Sources" button - Executors.newFixedThreadPool(3)         | Tab 4 "Parallel Data Sync" - 5
+                                         |                                                                      | simulated requests on 2 workers
+Callable + Future                       | Sync All Sources' 3 tasks are all Callables; a coordinator thread   | Tab 4 - dedicated Callable/Future
+                                         | calls future.get() on each                                          | button
+execute() vs submit()                   | Sync All Sources uses submit() (needs return values)                | Tab 4 uses both: execute() for
+                                         |                                                                      | the 5-task demo, submit() for
+                                         |                                                                      | the Callable demo
+Graceful shutdown                       | syncExecutor, tipGeneratorThread, tipNotifierThread all shut down / | Tab 4's explicit Shutdown button;
+(shutdown/shutdownNow/awaitTermination) | interrupted when the window closes                                  | ConcurrencyLabController.shutdown()
+Concurrency vs. parallelism,            | Sync All Sources' 3 tasks genuinely run at once - total sync time   | Tab 2 - race outcomes vary from
+nondeterministic ordering               | is ~900ms (the slowest task), not 900+500+300ms added up           | run to run, by design
+JavaFX thread-confinement rule          | Every feature above ends its background work with                  | Same rule, same pattern, in
+(background threads can't touch UI)     | Platform.runLater(...) before touching a Label/Slider/Button        | every tab
+
+
+NOTE on the race-condition row: this was deliberately kept as a Concurrency
+Lab-only demo instead of an actual bug shipped in the real Sync feature.
+The Lab's version is framed as "this is exactly the kind of bug the real
+Sync All Sources feature has to avoid," so it still ties back to the real
+feature's design rather than floating as an abstract exercise.
+
+
+PART 2: BUG ENCOUNTERED AND FIX
+=========================================================
+
+WHAT HAPPENED
+-------------
+After adding the profile picture / avatar feature to the top-right corner
+of the dashboard, clicking "Continue to HealthLens" from the Guide screen
+crashed with:
+
+    javafx.fxml.LoadException:
+    /HealthLens/target/classes/com/healthlens/HealthLens.fxml:60
+
+    Caused by: java.lang.UnsupportedOperationException:
+    Cannot determine type for property.
+
+This meant the FXML file failed to load at all, so the user could never
+reach the main dashboard once the profile avatar was added.
+
+ROOT CAUSE
+----------
+The profile avatar was built from a StackPane containing a Circle, a
+Label, and an ImageView layered on top of each other. A <tooltip> element
+was attached directly to that StackPane in the FXML:
+
+    <StackPane fx:id="profileAvatarStack" ...>
+        <Circle .../>
+        <Label .../>
+        <ImageView .../>
+        <tooltip>
+            <Tooltip text="..." />
+        </tooltip>
+    </StackPane>
+
+The problem: <tooltip> is only a valid FXML property on subclasses of
+javafx.scene.control.Control (Button, Label, Slider, etc.), because only
+Control has a setTooltip() method. StackPane is a plain layout container
+(javafx.scene.layout.Pane), NOT a Control, so it has no tooltip property
+at all. When the FXMLLoader tried to look up a setter method for
+"tooltip" on StackPane, it found none, threw
+UnsupportedOperationException, and the whole file failed to load.
+
+THE FIX
+-------
+1. Removed the <tooltip> block from the StackPane in HealthLens.fxml.
+2. Attached the tooltip in Java code instead, using Tooltip.install(),
+   which works on ANY Node (not just Controls):
+
+       Tooltip.install(profileAvatarStack,
+           new Tooltip("Your profile — click to change picture, email, or background"));
+
+   This line was placed once in the controller's initialize() method
+   (not inside the method that also runs on every login, to avoid
+   attaching the same tooltip twice).
+
+VERIFICATION
+------------
+After the fix, every other <tooltip> use in the project was checked and
+confirmed to be attached only to real Controls (Button, Slider) — this
+was the only place the mistake had been made.
+
+
+LESSON FOR FUTURE FXML WORK
+=========================================================
+Not every JavaFX node type supports every FXML property "shortcut" tag.
+<tooltip>, <contextMenu>, <onAction>, etc. only work on the specific
+class hierarchy that actually defines that property (Control and its
+subclasses, in most of these cases). Plain layout containers — Pane,
+StackPane, HBox, VBox, BorderPane, GridPane — do NOT support these
+shortcuts, even though visually it can seem reasonable to want them
+there. When in doubt, either wrap the content in a real Control, or set
+the property in the Controller's Java code, as done here.
