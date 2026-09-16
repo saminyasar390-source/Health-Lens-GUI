@@ -1,0 +1,29 @@
+* [33m7e43d67[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Add login and guide updates (#4)
+[31m|[m * [33m3bb20ab[m[33m ([m[1;31morigin/feature/login-enter-key-focus[m[33m, [m[1;32mfeature/login-enter-key-focus[m[33m)[m Add login and guide updates
+[31m|[m [32m|[m * [33mfa495bf[m[33m ([m[1;31morigin/revert-3-revert-2-feature/login-and-guide[m[33m)[m Revert "Revert 2 feature/login and guide"
+[31m|[m [32m|[m[31m/[m  
+[31m|[m[31m/[m[32m|[m   
+* [32m|[m   [33meee56d0[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/backup/pre-split-20260916[m[33m, [m[1;32mbackup/pre-split-20260916[m[33m, [m[1;32mbackup/pre-split-[m[33m)[m Merge pull request #3 from saminyasar390-source/revert-2-feature/login-and-guide
+[34m|[m[35m\[m [32m\[m  
+[34m|[m * [32m|[m [33m830d053[m[33m ([m[1;31morigin/revert-2-feature/login-and-guide[m[33m)[m Revert "Merge pull request #1 from saminyasar390-source/feature/login-enter-k…"
+[34m|[m [32m|[m[32m/[m  
+[34m|[m *   [33m47f4085[m Merge pull request #2 from saminyasar390-source/feature/login-and-guide
+[34m|[m [36m|[m[1;31m\[m  
+[34m|[m [36m|[m *   [33mca8fb6c[m[33m ([m[1;31morigin/feature/login-and-guide[m[33m)[m Merge pull request #1 from saminyasar390-source/feature/login-enter-key-focus
+[34m|[m [36m|[m [1;32m|[m[36m\[m  
+[34m|[m [36m|[m [1;32m|[m[36m/[m  
+[34m|[m [36m|[m[36m/[m[1;32m|[m   
+[34m|[m * [1;32m|[m [33mfc514d6[m Login: pressing Enter in username field focuses password field
+[34m|[m * [1;32m|[m [33ma30dfbc[m[33m ([m[1;31morigin/feature/MultiThreadingAndConcurrencyFinalUpdated[m[33m, [m[1;32mfeature/MultiThreadingAndConcurrencyFinalUpdated[m[33m)[m Fixing activity monitor
+[34m|[m * [1;32m|[m [33mff2148d[m[33m ([m[1;31morigin/feature/MultiThreadingAndConcurrencyFinalwithFix[m[33m, [m[1;32mfeature/MultiThreadingAndConcurrencyFinalwithFix[m[33m)[m Add notes on concurrency features and the tooltip/StackPane bug fix
+[34m|[m * [1;32m|[m [33med24d7c[m Add Multithreading and Concurrency Final with Bug fix
+[34m|[m * [1;32m|[m [33mee3bdc3[m[33m ([m[1;31morigin/feature/multithreadingAndconcurrencyFinalwithBugs[m[33m, [m[1;31morigin/feature/MultithreadingConcurrencyPrototype[m[33m, [m[1;32mfeature/multithreadingAndconcurrencyFinalwithBugs[m[33m, [m[1;32mfeature/MultithreadingConcurrencyPrototype[m[33m)[m Adding prototype version for multithreading and concurrency
+[34m|[m * [1;32m|[m [33md563585[m[33m ([m[1;31morigin/feature/signup-and-profile[m[33m, [m[1;32mfeature/signup-and-profile[m[33m)[m Add JavaFX concepts checklist
+[34m|[m * [1;32m|[m [33m34f36bc[m Add signup with email verification, custom country field, and profile menu
+[34m|[m [1;32m|[m[1;32m/[m  
+[34m|[m * [33mdf720ab[m[33m ([m[1;32mfeature/login-and-guide[m[33m)[m Add Login screen and 10-page onboarding Guide using JavaFX concepts
+[34m|[m * [33m453f235[m[33m ([m[1;32mfeature/gui-customization[m[33m)[m Update new modifications
+[34m|[m * [33m5de5b61[m[33m ([m[1;31morigin/feature/mvc-refactor[m[33m, [m[1;32mfeature/mvc-refactor[m[33m)[m Refactor into MVC: extract HealthData, Score Calculator, Score Result into a model package
+[34m|[m * [33m764206c[m Add theme toggle, settings, chat assistant, and MVC factor
+[34m|[m[34m/[m  
+* [33md697bb7[m Add initial HealthLens JavaFX project
