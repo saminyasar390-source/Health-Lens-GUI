@@ -22,7 +22,7 @@
 
         <VBox spacing="4.0">
             <Label styleClass="control-label" text="Username" />
-            <TextField fx:id="usernameField" promptText="Enter username" />
+            <TextField fx:id="usernameField" promptText="Enter username" onAction="#handleUsernameEnter" />
         </VBox>
 
         <VBox spacing="4.0">
