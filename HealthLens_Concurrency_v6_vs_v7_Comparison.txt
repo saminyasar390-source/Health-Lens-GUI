@@ -1,0 +1,218 @@
+HealthLens - Concurrency Rework Comparison (v6 -> v7)
+=========================================================
+This compares the ORIGINAL concurrency implementation (built earlier in this
+project, referred to below as "v6 / Activity Monitor") against the REWORKED
+version in HealthLens-v7-concurrency-rework.zip ("v7 / Activity Centre").
+
+This file is meant to sit alongside docs/CONCURRENCY_MAP.md, not replace it.
+CONCURRENCY_MAP.md documents where each concept lives in v7 on its own terms.
+This file specifically answers: "what changed, and why is v7 better?"
+
+
+PART 1: HIGH-LEVEL ARCHITECTURE
+=========================================================
+
+v6 (Activity Monitor)                  | v7 (Activity Centre)
+----------------------------------------|----------------------------------------
+One window with 4 generic-CS-flavoured  | One window ("Activity Centre") that
+tabs the user has to seek out:          | reads like a real task manager: a live
+Device Connections, Multi-Device Step   | "Running right now" list, a reminder
+Sync, Health Tip Notifications,         | inbox, connected data sources, and a
+Parallel Data Sync                      | Diagnostics self-test
+Concurrency classes: Box<T>,            | Concurrency classes: NotificationQueue<T>,
+UnsafeCounter, SafeCounter              | ReminderService, NotificationCenterService,
+                                         | SyncService, SourceReading, MergedReading,
+                                         | BreathingSession, ActivityInfo,
+                                         | ActivityRegistry, BackgroundServices,
+                                         | IntegrityCheck, HealthSnapshot, Notification
+Reminders: fixed round-robin array of   | Reminders: DATA-DRIVEN. A HealthSnapshot
+4 static strings, cycled in order       | (immutable, published via volatile) is
+regardless of the user's actual data    | checked against real goals; you only get
+                                         | nudged about things you're actually behind on
+Sync: 3 sources, no timeout, no         | Sync: 4 sources, each with a timeout via
+cancellation, always succeeds           | future.get(timeout), one source is
+                                         | deliberately unreliable and gets cancel(true)'d
+                                         | when it hangs
+Race-condition demo: a lab-only tab,    | Race-condition demo: a "Diagnostics" self-test
+runs whenever you click a button        | using a CountDownLatch start gate so the race
+                                         | reliably shows up, not just "sometimes"
+Lifecycle: each feature manages its     | Lifecycle: ONE class (BackgroundServices) owns
+own thread/executor and its own         | every service, starts them all, and shuts them
+shutdown hook separately                | all down in a deliberate, documented order
+Thread state display: a JavaFX          | Thread state display: a JavaFX Timeline
+Timeline polling one thread at a time,  | reading live Thread.getState() for EVERY
+only inside the isolated demo tab       | active background job, all the time, in the
+                                         | real running app
+
+
+PART 2: CONCEPT-BY-CONCEPT COMPARISON
+=========================================================
+
+Lab 2 Concept              | v6 approach                    | v7 approach (what's new/different)
+----------------------------|--------------------------------|-------------------------------------
+Thread vs Runnable          | Both used, but mostly inline    | Same, but every Runnable is a named
+                             | lambdas inside controller       | method reference (this::produceLoop,
+                             | methods                         | this::consumeLoop) - work is a real
+                             |                                 | method, not just a lambda blob
+Thread naming                | Threads named individually,    | Same idea, PLUS a custom ThreadFactory
+                             | one string per new Thread(...)  | for the sync pool so even pooled
+                             |                                 | workers get readable names
+                             |                                 | (sync-worker-1, sync-worker-2, ...)
+Six thread states            | Polled via Timeline in ONE      | Polled via Timeline for EVERY live
+                             | isolated demo tab only          | activity, all the time, in the real
+                             |                                 | app - "Show how it works" checkbox
+                             |                                 | reveals raw state names + thread names
+sleep()/join()/interrupt()   | Used for breathing exercise     | Same core idea, wrapped as its own
+                             | directly inside the controller  | BreathingSession class with isRunning()
+                             |                                 | guard (prevents double-start) and a
+                             |                                 | proper awaitFinish(millis) using join()
+Race condition / shared      | UnsafeCounter demo - runs       | IntegrityCheck - runs on a CountDownLatch
+mutable state                | whenever clicked, race may or   | so all threads start at the EXACT same
+                             | may not show up that run         | instant, making the race reproducible
+                             |                                 | almost every run instead of "sometimes"
+synchronized                 | synchronized METHODS on         | BOTH used correctly: synchronized methods
+                             | SafeCounter and Box              | on NotificationQueue, AND a synchronized
+                             |                                 | BLOCK on a private final lock object in
+                             |                                 | MergedReading (the more advanced form -
+                             |                                 | explicitly demonstrates "the monitor rule")
+wait()/notifyAll()           | Box<T> - one-slot only          | NotificationQueue<T> - BOUNDED to any
+                             |                                 | capacity (not just 1), with an extra
+                             |                                 | non-blocking offer() method for safe
+                             |                                 | use directly from the FX thread
+Producer-consumer            | tip-generator + tip-notifier    | ReminderService (producer) + Notification-
+                             | threads, fixed 90s interval,    | CenterService (consumer), producer reads
+                             | tips chosen round-robin          | real app data via a published snapshot,
+                             |                                 | consumer keeps a read/unread history and
+                             |                                 | notifies multiple listeners (observer
+                             |                                 | pattern), not just one banner
+ExecutorService/fixed pool   | 3 workers, default thread       | 3 workers, CUSTOM thread factory for
+                             | naming                          | names; pool is reused across repeated
+                             |                                 | Sync clicks instead of being rebuilt
+Callable + Future            | 3 Callables, future.get() with  | 4 Callables, future.get(timeout, UNIT) -
+                             | no timeout (would hang forever  | a source that never responds is detected
+                             | on a truly stuck source)        | and does not block the whole sync forever
+cancel(true)                 | NOT USED                        | USED - both when a source times out AND
+                             |                                 | when the user presses a Cancel button
+                             |                                 | mid-sync
+Graceful shutdown            | shutdown()/awaitTermination()/  | Same pattern, PLUS a single documented
+                             | shutdownNow() on each executor  | shutdown ORDER across five separate
+                             | independently                   | services (producer stopped first, then
+                             |                                 | consumer, then the pool) to avoid a
+                             |                                 | producer being stuck in put() forever
+Concurrent collections       | NOT USED                        | ConcurrentHashMap (ActivityRegistry,
+(java.util.concurrent)       |                                 | SyncService's lastReadings),
+                             |                                 | CopyOnWriteArrayList (listeners, sync
+                             |                                 | in-flight futures, notification history)
+Atomic variables             | NOT USED                        | AtomicInteger - unread notification
+                             |                                 | count, sources-reported count, sync
+                             |                                 | worker numbering
+Synchronizers (CountDownLatch,| NOT USED                       | CountDownLatch - used TWICE in
+Semaphore, ReentrantLock)     |                                 | IntegrityCheck: once as a start gate (so
+                             |                                 | every thread begins at the same instant)
+                             |                                 | and once as a finish gate (so results are
+                             |                                 | only read after every thread is done -
+                             |                                 | a genuine happens-before guarantee)
+volatile                     | NOT explicitly called out       | Explicitly used and documented:
+                             |                                 | HealthSnapshot reference in ReminderService,
+                             |                                 | status field in ActivityInfo, read flag in
+                             |                                 | Notification - each with a comment
+                             |                                 | explaining WHY it needs to be volatile
+Safe publication of          | NOT a distinct concept in v6    | HealthSnapshot is immutable (all fields
+immutable state              |                                 | final) and handed across threads through
+                             |                                 | one volatile reference - a real answer to
+                             |                                 | "how do I let a background thread read
+                             |                                 | live UI data safely" (answer: you don't -
+                             |                                 | you publish a snapshot instead)
+JavaFX thread-confinement     | Every feature ends with         | Same rule, PLUS it's structurally
+rule (Platform.runLater)      | Platform.runLater(...) before   | enforced: every class in the concurrency
+                             | touching UI                     | package except the two Controllers has
+                             |                                 | ZERO javafx imports at all (checkable with
+                             |                                 | a single grep command, documented in
+                             |                                 | CONCURRENCY_MAP.md)
+
+
+PART 3: WHAT'S GENUINELY NEW IN v7 (not present in v6 at all)
+=========================================================
+
+1. CountDownLatch as a start/finish gate (IntegrityCheck) - makes the race
+   condition demo reliably reproducible instead of "hit or miss."
+2. Future.get(timeout, TimeUnit) + cancel(true) - a hung/slow source cannot
+   freeze the whole sync forever; this is closer to how a real app has to
+   handle an unreliable third-party API.
+3. ConcurrentHashMap and CopyOnWriteArrayList - real concurrent collections
+   from java.util.concurrent, used for state that's genuinely written from
+   multiple threads and read from the FX thread.
+4. AtomicInteger - for simple counters that need thread-safety without a
+   full synchronized block (unread count, sources reported, worker numbering).
+5. A private-final-lock synchronized BLOCK (MergedReading), as opposed to
+   v6's synchronized METHODS only - demonstrates the more general form of
+   the pattern and explicitly documents "the monitor rule" (one lock object,
+   nothing outside can synchronize on something else by mistake).
+6. Safe publication of immutable state across threads (HealthSnapshot) -
+   this is a genuinely more advanced correctness concept than anything in v6.
+7. A single lifecycle owner (BackgroundServices) that starts and stops
+   EVERYTHING in one place, in a deliberate, documented shutdown order.
+8. A bounded, general-capacity queue (NotificationQueue<T>, capacity 5) with
+   both a blocking put() and a non-blocking offer() - v6's Box<T> only ever
+   held one slot and had no non-blocking option.
+9. A listener/observer pattern (NotificationCenterService.Listener,
+   SyncService.Listener) so multiple parts of the UI can react to background
+   events, instead of one hard-coded callback.
+10. Data-driven reminders - the reminder thread reads a real HealthSnapshot
+    and only nudges the user about goals they're ACTUALLY behind on, instead
+    of cycling through a fixed list regardless of their real data.
+11. A visible self-diagnostic ("Diagnostics" tab) that proves, on the user's
+    own machine, that the app's shared counters are correctly guarded - a
+    real-world pattern (health checks / self-tests) shipped in real software.
+
+
+PART 4: WHAT STAYED CONCEPTUALLY THE SAME
+=========================================================
+
+- Both use ExecutorService + Callable + Future for parallel data fetching.
+- Both use the producer-consumer pattern (wait()/notifyAll()) for the
+  reminder/notification pipeline.
+- Both use a background Thread + sleep() + cooperative interrupt() for the
+  guided breathing exercise.
+- Both strictly follow the JavaFX thread-confinement rule: no background
+  thread ever touches a UI control directly, always via Platform.runLater(...).
+- Both deliberately keep an actual, visible, reproducible race-condition bug
+  as a demo/diagnostic ONLY - neither version ships a real race condition in
+  a live, user-facing feature. (v7 does this better - see Part 3, item 1 -
+  but the design principle is the same in both.)
+- Both name every background thread explicitly, rather than leaving threads
+  with default names like "Thread-3".
+
+
+PART 5: FULL LAB 2 CONCEPT CHECKLIST - CONFIRMED PRESENT IN v7
+=========================================================
+(Matches Lab 2 Manual, Section 14's own checklist, cross-checked against the
+actual v7 source code, not just the manual's wording.)
+
+[x] Program, process, thread, JVM launch           - BackgroundServices javadoc
+[x] Shared heap vs private stack/PC                - MergedReading (shared) vs worker locals
+[x] Concurrency vs parallelism                      - SyncService (4 sources, 3 workers)
+[x] Thread subclass / start() / run() / join()      - BreathingSession, ReminderService
+[x] Runnable separated from Thread                  - ReminderService.start()
+[x] The six thread states                           - ActivityInfo.getThreadStateText()
+[x] sleep(), join(), interruption                   - BreathingSession, ReminderService
+[x] Shared resource, race condition, atomicity      - MergedReading, IntegrityCheck
+[x] Monitor and synchronized method/block           - NotificationQueue, MergedReading
+[x] wait(), notifyAll(), guarded while condition    - NotificationQueue.put()/take()
+[x] ExecutorService and fixed thread pool           - SyncService
+[x] Callable, Future, graceful shutdown             - SyncService, BackgroundServices.shutdown()
+
+Beyond the core checklist, v7 also demonstrates (not required by the
+manual's own summary table, but covered earlier in the manual's Task 8
+introduction table): concurrent collections, atomic variables, and
+synchronizers (CountDownLatch) - the three families v6 never touched at all.
+
+
+CLOSING NOTE
+=========================================================
+v6 was built to satisfy a checklist: one tab per concept, one button per
+demo. v7 solves the same checklist by building features that would exist in
+a real health app anyway - and the concurrency is simply how those features
+are implemented correctly. That's a meaningfully more advanced take on the
+same assignment, and it directly answers the brief of making the
+multithreading/concurrency work "real life applicable."
