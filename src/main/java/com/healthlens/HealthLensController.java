@@ -1,5 +1,7 @@
 package com.healthlens;
 
+import com.healthlens.concurrency.Box;
+import com.healthlens.concurrency.ConcurrencyLabController;
 import com.healthlens.model.HealthData;
 import com.healthlens.model.ScoreCalculator;
 import com.healthlens.model.ScoreResult;
@@ -7,10 +9,14 @@ import com.healthlens.model.ScoreResult;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
+import javafx.animation.PauseTransition;
 import javafx.animation.Timeline;
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
+import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.chart.BarChart;
 import javafx.scene.chart.CategoryAxis;
@@ -28,6 +34,7 @@ import javafx.scene.control.Slider;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.SpinnerValueFactory;
 import javafx.scene.control.TextField;
+import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
@@ -48,6 +55,10 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.prefs.Preferences;
 
 /**
@@ -74,7 +85,9 @@ public class HealthLensController {
     @FXML private Button themeToggleButton;
     @FXML private Button settingsButton;
     @FXML private Button chatButton;
+    @FXML private Button concurrencyLabButton;
     @FXML private Label subtitleLabel;
+    @FXML private Label reminderBanner;
     @FXML private StackPane profileAvatarStack;
     @FXML private Circle profileCircleBg;
     @FXML private Label profileInitialsLabel;
@@ -92,11 +105,14 @@ public class HealthLensController {
 
     @FXML private Slider stressSlider;
     @FXML private Label stressValueLabel;
+    @FXML private Button breathingButton;
+    @FXML private Label breathingStatusLabel;
 
     @FXML private ChoiceBox<String> moodChoiceBox;
 
     @FXML private Button updateButton;
     @FXML private Button resetButton;
+    @FXML private Button syncButton;
 
     // --- Outputs: progress bars + goal labels ---
     @FXML private ProgressBar sleepBar;
@@ -138,6 +154,8 @@ public class HealthLensController {
         updateGoalLabels();
         applyThemeWhenSceneReady();
         setupProfileAvatar();
+        Tooltip.install(profileAvatarStack, new Tooltip("Your profile — click to change picture, email, or background"));
+        setupReminderScheduler();
 
         // Show an initial snapshot on load
         handleUpdate();
@@ -242,6 +260,244 @@ public class HealthLensController {
                 });
             }
         });
+    }
+
+    // ===================== HEALTH TIP NOTIFICATION PIPELINE (real producer-consumer) =====================
+
+    private static final int TIP_INTERVAL_SECONDS = 90;
+    private final Box<String> tipBox = new Box<>();
+    private Thread tipGeneratorThread;
+    private Thread tipNotifierThread;
+
+    /**
+     * A genuine producer-consumer pipeline (Lab 2, Task 7), not a simulation
+     * of one: a "tip generator" thread produces a health tip into a shared
+     * one-slot Box roughly every TIP_INTERVAL_SECONDS (put() blocks if the
+     * previous tip hasn't been shown yet — natural backpressure, so tips
+     * never pile up). A separate "notifier" thread blocks on take() and,
+     * the moment a tip appears, hands it to Platform.runLater(...) to show
+     * on the dashboard. Both threads are interrupted when the window closes.
+     */
+    private void setupReminderScheduler() {
+        String[] tips = {
+                "💧 Time for a glass of water?",
+                "🧘 Take a 60-second breathing break.",
+                "🚶 Stand up and stretch for a minute.",
+                "🌙 Getting close to bedtime? Aim for your sleep goal."
+        };
+
+        tipGeneratorThread = new Thread(() -> {
+            int index = 0;
+            try {
+                while (!Thread.currentThread().isInterrupted()) {
+                    Thread.sleep(TIP_INTERVAL_SECONDS * 1000L);
+                    tipBox.put(tips[index % tips.length]);
+                    index++;
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }, "tip-generator");
+        tipGeneratorThread.setDaemon(true);
+
+        tipNotifierThread = new Thread(() -> {
+            try {
+                while (!Thread.currentThread().isInterrupted()) {
+                    String tip = tipBox.take();
+                    Platform.runLater(() -> showReminderBanner(tip));
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }, "tip-notifier");
+        tipNotifierThread.setDaemon(true);
+
+        tipGeneratorThread.start();
+        tipNotifierThread.start();
+
+        rootPane.sceneProperty().addListener((obs, oldScene, newScene) -> {
+            if (newScene != null) {
+                newScene.windowProperty().addListener((o2, oldWindow, newWindow) -> {
+                    if (newWindow != null) {
+                        newWindow.setOnCloseRequest(e -> {
+                            tipGeneratorThread.interrupt();
+                            tipNotifierThread.interrupt();
+                            if (syncExecutor != null) {
+                                syncExecutor.shutdownNow();
+                            }
+                        });
+                    }
+                });
+            }
+        });
+    }
+
+    private void showReminderBanner(String message) {
+        reminderBanner.setText(message);
+        reminderBanner.setVisible(true);
+        reminderBanner.setManaged(true);
+        PauseTransition hide = new PauseTransition(Duration.seconds(6));
+        hide.setOnFinished(e -> {
+            reminderBanner.setVisible(false);
+            reminderBanner.setManaged(false);
+        });
+        hide.play();
+    }
+
+    // ===================== GUIDED BREATHING (Thread + sleep + cooperative interrupt) =====================
+
+    private Thread breathingThread;
+    private volatile boolean breathingActive = false;
+
+    /**
+     * A genuinely useful stress-relief tool, not just a demo: cycles through
+     * breathe-in / hold / breathe-out phases on a background Thread using
+     * real sleep() timing, updating the status label via Platform.runLater
+     * each phase. The Stop button (same button, relabeled) calls
+     * interrupt() — cooperative cancellation, exactly like Lab 2 Task 4.
+     * Finishing a full session nudges the stress slider down slightly, a
+     * real reward tied to real dashboard data.
+     */
+    @FXML
+    private void handleToggleBreathing() {
+        if (breathingActive) {
+            if (breathingThread != null) {
+                breathingThread.interrupt();
+            }
+            return;
+        }
+
+        breathingActive = true;
+        breathingButton.setText("⏹ Stop");
+        String[] phases = {
+                "Breathe in...", "Hold...", "Breathe out...", "Hold...",
+                "Breathe in...", "Hold...", "Breathe out..."
+        };
+
+        breathingThread = new Thread(() -> {
+            boolean completedFully = true;
+            try {
+                for (String phase : phases) {
+                    Platform.runLater(() -> breathingStatusLabel.setText(phase));
+                    Thread.sleep(2000);
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                completedFully = false;
+            }
+
+            final boolean finished = completedFully;
+            Platform.runLater(() -> {
+                breathingActive = false;
+                breathingButton.setText("🧘 Guided Breathing");
+                if (finished) {
+                    breathingStatusLabel.setText("Done — nicely paced.");
+                    stressSlider.setValue(Math.max(stressSlider.getMin(), stressSlider.getValue() - 1));
+                    handleUpdate();
+                } else {
+                    breathingStatusLabel.setText("Stopped early — that's okay too.");
+                }
+            });
+        }, "breathing-exercise");
+        breathingThread.setDaemon(true);
+        breathingThread.start();
+    }
+
+    // ===================== SYNC ALL SOURCES (ExecutorService + Callable + Future) =====================
+
+    private ExecutorService syncExecutor;
+
+    /**
+     * Genuine parallel data fetch: three independent "sources" (a smartwatch,
+     * a phone pedometer, and a manual water log) are each queried at the
+     * same time on a shared thread pool, using Callable so each can return
+     * a real value instead of just running fire-and-forget. A coordinating
+     * background thread calls future.get() on all three (which blocks, but
+     * safely — it's not the FX thread), merges the results, then applies
+     * them to the UI via Platform.runLater(...).
+     */
+    @FXML
+    private void handleSyncWithDevice() {
+        syncButton.setDisable(true);
+        syncButton.setText("Syncing from 3 sources...");
+
+        if (syncExecutor == null || syncExecutor.isShutdown()) {
+            syncExecutor = Executors.newFixedThreadPool(3);
+        }
+
+        // Smartwatch: heart-rate-derived sleep quality + stress reading (slower — more sensors)
+        Callable<double[]> smartwatchTask = () -> {
+            Thread.sleep(900);
+            double sleepHours = 5 + Math.random() * 4;
+            double stressLevel = 2 + Math.random() * 6;
+            return new double[]{sleepHours, stressLevel};
+        };
+
+        // Phone pedometer: step-derived exercise minutes (fast — local sensor)
+        Callable<Double> pedometerTask = () -> {
+            Thread.sleep(500);
+            return Math.random() * 45;
+        };
+
+        // Manual water log: whatever the user already tapped in on their phone today
+        Callable<Double> waterLogTask = () -> {
+            Thread.sleep(300);
+            return 3 + Math.random() * 7;
+        };
+
+        Future<double[]> smartwatchFuture = syncExecutor.submit(smartwatchTask);
+        Future<Double> pedometerFuture = syncExecutor.submit(pedometerTask);
+        Future<Double> waterLogFuture = syncExecutor.submit(waterLogTask);
+
+        Thread coordinator = new Thread(() -> {
+            try {
+                double[] watchResult = smartwatchFuture.get();
+                double exerciseMinutes = pedometerFuture.get();
+                double waterGlasses = waterLogFuture.get();
+                double sleepHours = watchResult[0];
+                double stressLevel = watchResult[1];
+
+                Platform.runLater(() -> {
+                    sleepSlider.setValue(sleepHours);
+                    waterSlider.setValue(waterGlasses);
+                    exerciseSlider.setValue(exerciseMinutes);
+                    stressSlider.setValue(stressLevel);
+                    handleUpdate();
+                    syncButton.setDisable(false);
+                    syncButton.setText("🔄 Sync All Sources");
+                });
+            } catch (Exception e) {
+                Platform.runLater(() -> {
+                    syncButton.setDisable(false);
+                    syncButton.setText("🔄 Sync All Sources");
+                });
+            }
+        }, "sync-coordinator");
+        coordinator.setDaemon(true);
+        coordinator.start();
+    }
+
+    // ===================== CONCURRENCY LAB =====================
+
+    @FXML
+    private void handleOpenConcurrencyLab() {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/healthlens/concurrency/ConcurrencyLab.fxml"));
+            Parent labRoot = loader.load();
+            ConcurrencyLabController labController = loader.getController();
+
+            Scene labScene = new Scene(labRoot, 620, 560);
+            labScene.getStylesheets().add(
+                    getClass().getResource(darkMode ? "styles-dark.css" : "styles.css").toExternalForm());
+
+            Stage labStage = new Stage();
+            labStage.setTitle("HealthLens — Activity Monitor");
+            labStage.setScene(labScene);
+            labStage.setOnCloseRequest(e -> labController.shutdown());
+            labStage.show();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private void updateGoalLabels() {

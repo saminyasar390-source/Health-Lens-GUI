@@ -255,3 +255,32 @@
 .wizard-nav {
     -fx-background-color: transparent;
 }
+
+/* ===================== REMINDER BANNER ===================== */
+
+.reminder-banner {
+    -fx-background-color: rgba(45, 212, 191, 0.18);
+    -fx-text-fill: #5eead4;
+    -fx-background-radius: 8;
+    -fx-padding: 8 14;
+    -fx-font-size: 12.5px;
+    -fx-font-weight: 600;
+}
+
+/* ===================== ACTIVITY MONITOR WINDOW (solid bg, no image behind it) ===================== */
+
+.lab-window {
+    -fx-background-color: #0b1220;
+}
+
+.lab-window .tab-pane .tab-header-area .tab {
+    -fx-background-color: #1e293b;
+}
+
+.lab-window .tab-pane .tab:selected {
+    -fx-background-color: #0b1220;
+}
+
+.lab-window .tab-pane .tab .tab-label {
+    -fx-text-fill: #e2e8f0;
+}

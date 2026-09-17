@@ -2,6 +2,10 @@ D:\HealthLens\src\main\java\com\healthlens\auth\LoginController.java
 D:\HealthLens\src\main\java\com\healthlens\auth\PasswordUtil.java
 D:\HealthLens\src\main\java\com\healthlens\auth\SignupController.java
 D:\HealthLens\src\main\java\com\healthlens\ChatParser.java
+D:\HealthLens\src\main\java\com\healthlens\concurrency\Box.java
+D:\HealthLens\src\main\java\com\healthlens\concurrency\ConcurrencyLabController.java
+D:\HealthLens\src\main\java\com\healthlens\concurrency\SafeCounter.java
+D:\HealthLens\src\main\java\com\healthlens\concurrency\UnsafeCounter.java
 D:\HealthLens\src\main\java\com\healthlens\guide\GuideController.java
 D:\HealthLens\src\main\java\com\healthlens\HealthLensController.java
 D:\HealthLens\src\main\java\com\healthlens\Main.java
