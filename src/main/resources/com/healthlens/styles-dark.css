@@ -347,3 +347,9 @@
 .recommendation-title { -fx-font-size: 14px; -fx-font-weight: bold; }
 .recommendation-attention { -fx-text-fill: #d97706; }
 .recommendation-positive { -fx-text-fill: #16a34a; }
+
+/* Smart recommendations dashboard */
+.recommendation-status { -fx-font-size: 12px; -fx-opacity: 0.78; }
+.recommendation-card { -fx-padding: 14px; -fx-background-radius: 14px; -fx-border-radius: 14px; -fx-pref-width: 320px; -fx-min-height: 105px; }
+.recommendation-card-attention { -fx-border-color: #d97706; -fx-border-width: 1px; }
+.recommendation-card-positive { -fx-border-color: #16a34a; -fx-border-width: 1px; }

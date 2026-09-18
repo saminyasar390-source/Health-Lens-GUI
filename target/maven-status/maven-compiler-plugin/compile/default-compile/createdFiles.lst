@@ -3,6 +3,7 @@ com\healthlens\HealthLensController$1.class
 com\healthlens\concurrency\SyncService$Listener.class
 com\healthlens\concurrency\BreathingSession$Listener.class
 com\healthlens\concurrency\ActivityCenterController$1.class
+com\healthlens\HealthLensController$RecommendationEngine.class
 com\healthlens\concurrency\Notification.class
 com\healthlens\concurrency\SyncService.class
 com\healthlens\auth\LoginController.class
@@ -19,12 +20,15 @@ com\healthlens\concurrency\SourceReading.class
 com\healthlens\concurrency\IntegrityCheck.class
 com\healthlens\concurrency\IntegrityCheck$GuardedTally.class
 com\healthlens\concurrency\SourceReading$Status.class
+com\healthlens\HealthLensController$RecommendationCardData.class
 com\healthlens\guide\GuideController.class
 com\healthlens\concurrency\UnsafeCounter.class
 com\healthlens\auth\SignupController.class
 com\healthlens\concurrency\IntegrityCheck$Result.class
+com\healthlens\HealthLensController$RecommendationResult.class
 com\healthlens\concurrency\BreathingSession.class
 com\healthlens\concurrency\ReminderService.class
+com\healthlens\HealthLensController$RecommendationSnapshot.class
 com\healthlens\concurrency\Box.class
 com\healthlens\concurrency\IntegrityCheck$PlainTally.class
 com\healthlens\concurrency\SafeCounter.class

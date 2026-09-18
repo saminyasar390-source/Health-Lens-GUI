@@ -207,12 +207,6 @@ public class GuideController implements Initializable {
             stage.setMinHeight(650);
         } catch (Exception e) {
             e.printStackTrace();
-            Alert error = new Alert(Alert.AlertType.ERROR);
-            error.setTitle("Unable to open HealthLens");
-            error.setHeaderText("The main dashboard could not be loaded.");
-            error.setContentText(e.getClass().getSimpleName() + ": " +
-                    (e.getMessage() == null ? "Check the console output for details." : e.getMessage()));
-            error.showAndWait();
         }
     }
 

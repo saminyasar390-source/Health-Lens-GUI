@@ -64,6 +64,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.prefs.Preferences;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * CONTROLLER for HealthLens.fxml.
@@ -141,6 +144,17 @@ public class HealthLensController {
     @FXML private Label batteryPercentLabel;
 
     private final List<Region> batterySegmentNodes = new ArrayList<>();
+
+    // Recommendation engine: calculations run off the JavaFX Application Thread.
+    private final ExecutorService recommendationExecutor = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "healthlens-recommendation-worker");
+        t.setDaemon(true);
+        return t;
+    });
+    private final AtomicLong recommendationVersion = new AtomicLong();
+    private Stage recommendationsStage;
+    private VBox recommendationsContent;
+    private Label recommendationStatusLabel;
 
     /** THE MODEL. Everything about "what the data means" is delegated to this + ScoreCalculator. */
     private final HealthData healthData = new HealthData();
@@ -244,8 +258,15 @@ public class HealthLensController {
         exerciseSlider.valueProperty().addListener((obs, oldV, newV) ->
                 exerciseValueLabel.setText(String.format(Locale.US, "%d min", Math.round(newV.doubleValue()))));
 
-        stressSlider.valueProperty().addListener((obs, oldV, newV) ->
-                stressValueLabel.setText(String.format(Locale.US, "%d", Math.round(newV.doubleValue()))));
+        stressSlider.valueProperty().addListener((obs, oldV, newV) -> {
+            stressValueLabel.setText(String.format(Locale.US, "%d", Math.round(newV.doubleValue())));
+            requestRecommendationRefresh();
+        });
+
+        sleepSlider.valueProperty().addListener((obs, oldV, newV) -> requestRecommendationRefresh());
+        waterSlider.valueProperty().addListener((obs, oldV, newV) -> requestRecommendationRefresh());
+        exerciseSlider.valueProperty().addListener((obs, oldV, newV) -> requestRecommendationRefresh());
+        moodChoiceBox.valueProperty().addListener((obs, oldV, newV) -> requestRecommendationRefresh());
     }
 
     private void setupChart() {
@@ -296,7 +317,7 @@ public class HealthLensController {
             if (newScene != null) {
                 newScene.windowProperty().addListener((o2, oldWindow, newWindow) -> {
                     if (newWindow != null) {
-                        newWindow.setOnCloseRequest(e -> services.shutdown());
+                        newWindow.setOnCloseRequest(e -> { services.shutdown(); recommendationExecutor.shutdownNow(); });
                     }
                 });
             }
@@ -827,56 +848,159 @@ public class HealthLensController {
                 healthData.getStressComfortMax()));
     }
 
-    /** Opens a separate recommendations window based on the current dashboard inputs. */
+    /**
+     * Opens a separate smart recommendation dashboard. The worker thread calculates
+     * recommendations from an immutable snapshot, while Platform.runLater updates
+     * the JavaFX scene. This keeps the main GUI responsive and demonstrates
+     * producer/consumer-style concurrency.
+     */
     @FXML
     private void handleOpenRecommendations() {
-        VBox content = new VBox(12);
-        content.getStyleClass().add("recommendations-content");
-        content.setPadding(new Insets(18));
+        if (recommendationsStage != null && recommendationsStage.isShowing()) {
+            recommendationsStage.toFront();
+            requestRecommendationRefresh();
+            return;
+        }
 
-        Label heading = new Label("Your Personalized Health Recommendations");
+        recommendationsContent = new VBox(14);
+        recommendationsContent.setPadding(new Insets(20));
+        recommendationsContent.getStyleClass().add("recommendations-content");
+
+        Label heading = new Label("Actions should be taken for better health");
         heading.getStyleClass().add("recommendations-heading");
-        Label intro = new Label("Suggestions are based on your current entries and are not medical advice.");
+        Label intro = new Label("Live recommendations update in the background as your dashboard values change.");
+        intro.setWrapText(true);
         intro.getStyleClass().add("recommendations-intro");
-        content.getChildren().addAll(heading, intro);
+        recommendationStatusLabel = new Label("Preparing your recommendations...");
+        recommendationStatusLabel.getStyleClass().add("recommendation-status");
+        recommendationsContent.getChildren().addAll(heading, intro, recommendationStatusLabel);
 
-        addRecommendation(content, "💤 Sleep", sleepSlider.getValue() < 7,
-                "Try to build a consistent sleep routine and aim for around 7–9 hours.",
-                "Your sleep duration is within a reasonable daily range. Keep your sleep schedule consistent.");
-        addRecommendation(content, "💧 Hydration", waterSlider.getValue() < healthData.getWaterGoalGlasses(),
-                "Your water intake is below your configured goal. Drink water regularly throughout the day.",
-                "You are meeting your configured water goal. Continue spreading your intake across the day.");
-        addRecommendation(content, "🏃 Exercise", exerciseSlider.getValue() < healthData.getExerciseGoalMinutes(),
-                "Your exercise is below your daily goal. Consider a manageable walk or light activity.",
-                "You are meeting your exercise goal. Maintain a routine that feels sustainable.");
-        addRecommendation(content, "🧠 Stress", stressSlider.getValue() >= 7,
-                "Your stress level is high. Try guided breathing, a short break, or talking to someone you trust.",
-                "Your reported stress level is not in the high range. Keep using healthy coping habits.");
-        addRecommendation(content, "🙂 Mood", "Low".equalsIgnoreCase(moodChoiceBox.getValue()) || "Stressed".equalsIgnoreCase(moodChoiceBox.getValue()),
-                "Your selected mood suggests you may benefit from rest, support, or a calming activity.",
-                "Your selected mood is positive or neutral. Continue activities that support your wellbeing.");
-
-        Dialog<Void> dialog = new Dialog<>();
-        dialog.setTitle("Personalized Health Recommendations");
-        dialog.setHeaderText(null);
-        dialog.getDialogPane().setContent(content);
-        dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
-        dialog.getDialogPane().getStyleClass().add("recommendations-dialog");
-        dialog.getDialogPane().setPrefWidth(560);
-        dialog.showAndWait();
+        recommendationsStage = new Stage();
+        recommendationsStage.setTitle("HealthLens • Smart Recommendations");
+        recommendationsStage.initModality(Modality.NONE);
+        recommendationsStage.setScene(new Scene(recommendationsContent, 720, 650));
+        applyStylesToScene(recommendationsStage.getScene());
+        recommendationsStage.setOnCloseRequest(event -> {
+            recommendationsStage = null;
+            recommendationsContent = null;
+            recommendationStatusLabel = null;
+        });
+        recommendationsStage.show();
+        requestRecommendationRefresh();
     }
 
-    private void addRecommendation(VBox content, String title, boolean needsAttention,
-                                   String attentionText, String positiveText) {
-        VBox card = new VBox(5);
-        card.getStyleClass().add("recommendation-card");
-        Label titleLabel = new Label(title);
-        titleLabel.getStyleClass().add("recommendation-title");
-        Label message = new Label(needsAttention ? attentionText : positiveText);
-        message.setWrapText(true);
-        message.getStyleClass().add(needsAttention ? "recommendation-attention" : "recommendation-positive");
-        card.getChildren().addAll(titleLabel, message);
-        content.getChildren().add(card);
+    private void requestRecommendationRefresh() {
+        if (recommendationsContent == null || recommendationsStage == null || !recommendationsStage.isShowing()) {
+            return;
+        }
+
+        final long version = recommendationVersion.incrementAndGet();
+        final RecommendationSnapshot snapshot = new RecommendationSnapshot(
+                sleepSlider.getValue(), waterSlider.getValue(), exerciseSlider.getValue(),
+                stressSlider.getValue(), moodChoiceBox.getValue(),
+                healthData.getWaterGoalGlasses(), healthData.getExerciseGoalMinutes());
+
+        recommendationExecutor.submit(() -> {
+            RecommendationResult result = RecommendationEngine.generate(snapshot);
+            Platform.runLater(() -> {
+                if (version != recommendationVersion.get() || recommendationsContent == null) return;
+                renderRecommendations(result);
+            });
+        });
+    }
+
+    private void renderRecommendations(RecommendationResult result) {
+        // Keep the heading, intro, and status label; replace the previous card grid.
+        if (recommendationsContent.getChildren().size() > 3) {
+            recommendationsContent.getChildren().remove(3, recommendationsContent.getChildren().size());
+        }
+        recommendationStatusLabel.setText("Updated in background • " + result.summary);
+
+        GridPane grid = new GridPane();
+        grid.setHgap(12);
+        grid.setVgap(12);
+        for (int i = 0; i < result.cards.size(); i++) {
+            RecommendationCardData data = result.cards.get(i);
+            VBox card = new VBox(7);
+            card.getStyleClass().addAll("recommendation-card", data.attention ? "recommendation-card-attention" : "recommendation-card-positive");
+            Label title = new Label(data.title);
+            title.getStyleClass().add("recommendation-title");
+            Label message = new Label(data.message);
+            message.setWrapText(true);
+            message.getStyleClass().add(data.attention ? "recommendation-attention" : "recommendation-positive");
+            card.getChildren().addAll(title, message);
+            grid.add(card, i % 2, i / 2);
+            GridPane.setHgrow(card, Priority.ALWAYS);
+        }
+        recommendationsContent.getChildren().add(grid);
+    }
+
+    private void applyStylesToScene(Scene scene) {
+        String css = getClass().getResource(darkMode ? "styles-dark.css" : "styles.css").toExternalForm();
+        scene.getStylesheets().add(css);
+    }
+
+    private static final class RecommendationSnapshot {
+        final double sleep, water, exercise, stress, waterGoal, exerciseGoal;
+        final String mood;
+        RecommendationSnapshot(double sleep, double water, double exercise, double stress,
+                                String mood, double waterGoal, double exerciseGoal) {
+            this.sleep = sleep; this.water = water; this.exercise = exercise; this.stress = stress;
+            this.mood = mood == null ? "Okay" : mood; this.waterGoal = waterGoal; this.exerciseGoal = exerciseGoal;
+        }
+    }
+
+    private static final class RecommendationCardData {
+        final String title, message; final boolean attention;
+        RecommendationCardData(String title, String message, boolean attention) {
+            this.title = title; this.message = message; this.attention = attention;
+        }
+    }
+
+    private static final class RecommendationResult {
+        final List<RecommendationCardData> cards; final String summary;
+        RecommendationResult(List<RecommendationCardData> cards, String summary) { this.cards = cards; this.summary = summary; }
+    }
+
+    /** Pure worker-side logic: no JavaFX controls are accessed here. */
+    private static final class RecommendationEngine {
+        static RecommendationResult generate(RecommendationSnapshot s) {
+            List<RecommendationCardData> cards = new ArrayList<>();
+            boolean sleepAttention = s.sleep < 7;
+            cards.add(new RecommendationCardData("💤 Sleep",
+                    sleepAttention ? "Aim for a consistent 7–9 hour sleep window and reduce screen time before bed."
+                            : "Your sleep duration is in a reasonable range. Keep your sleep schedule consistent.", sleepAttention));
+
+            boolean waterAttention = s.water < s.waterGoal;
+            cards.add(new RecommendationCardData("💧 Hydration",
+                    waterAttention ? String.format(Locale.US, "You are %.0f glasses below your configured goal. Spread water intake across the day.", Math.max(0, s.waterGoal - s.water))
+                            : "You are meeting your configured water goal. Continue drinking regularly.", waterAttention));
+
+            boolean exerciseAttention = s.exercise < s.exerciseGoal;
+            cards.add(new RecommendationCardData("🏃 Exercise",
+                    exerciseAttention ? String.format(Locale.US, "Add about %.0f minutes of manageable movement, such as walking or stretching.", Math.max(0, s.exerciseGoal - s.exercise))
+                            : "You are meeting your exercise goal. Keep activity sustainable and include recovery.", exerciseAttention));
+
+            boolean stressAttention = s.stress >= 7;
+            cards.add(new RecommendationCardData("🧠 Stress",
+                    stressAttention ? "Your reported stress is high. Try paced breathing, a short break, or reaching out to someone you trust."
+                            : "Your reported stress is not in the high range. Continue using healthy coping habits.", stressAttention));
+
+            boolean moodAttention = "Low".equalsIgnoreCase(s.mood) || "Stressed".equalsIgnoreCase(s.mood);
+            cards.add(new RecommendationCardData("🙂 Mood",
+                    moodAttention ? "Consider rest, a calming activity, or talking with someone supportive."
+                            : "Keep activities that support your wellbeing and monitor changes in mood.", moodAttention));
+
+            int estimatedCalories = (int) Math.round(1900 + (s.exercise * 8) - (s.stress * 10));
+            estimatedCalories = Math.max(1600, Math.min(2800, estimatedCalories));
+            int estimatedProtein = (int) Math.round(75 + (s.exercise * 0.35));
+            cards.add(new RecommendationCardData("🍽 Nutrition targets",
+                    String.format(Locale.US, "Estimated starting point: around %,d kcal/day and %d g protein/day. Adjust with your personal needs and a qualified professional.", estimatedCalories, estimatedProtein), false));
+
+            int attentionCount = 0;
+            for (RecommendationCardData c : cards) if (c.attention) attentionCount++;
+            return new RecommendationResult(cards, attentionCount == 0 ? "All tracked areas are currently on target" : attentionCount + " area(s) need attention");
+        }
     }
 
     @FXML
