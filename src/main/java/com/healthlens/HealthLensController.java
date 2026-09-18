@@ -16,6 +16,7 @@ import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.PauseTransition;
+import javafx.animation.ScaleTransition;
 import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
@@ -871,6 +872,7 @@ public class HealthLensController {
 
         // Add from low to high so the VBox fills from the bottom visually.
         batterySegments.getChildren().addAll(batterySegmentNodes);
+        batteryPercentLabel.setTooltip(new Tooltip("Battery percentage is calculated from your overall health score."));
     }
 
     /** Updates the battery using the existing overall health score. */
@@ -880,17 +882,33 @@ public class HealthLensController {
         String batteryTier = "battery-" + result.getTier();
 
         batteryPercentLabel.setText(percent + "%");
+        ScaleTransition pulse = new ScaleTransition(Duration.millis(220), batteryPercentLabel);
+        pulse.setFromX(0.92);
+        pulse.setFromY(0.92);
+        pulse.setToX(1.0);
+        pulse.setToY(1.0);
+        pulse.play();
         batteryPercentLabel.getStyleClass().removeAll("battery-good", "battery-medium", "battery-poor");
         batteryPercentLabel.getStyleClass().add(batteryTier);
 
         for (int i = 0; i < batterySegmentNodes.size(); i++) {
             Region segment = batterySegmentNodes.get(i);
             segment.getStyleClass().removeAll("battery-filled", "battery-empty", "battery-good", "battery-medium", "battery-poor");
-            if (i >= 5 - filledSegments) {
+            boolean shouldFill = i >= 5 - filledSegments;
+            if (shouldFill) {
                 segment.getStyleClass().addAll("battery-filled", batteryTier);
             } else {
                 segment.getStyleClass().add("battery-empty");
             }
+
+            // Smoothly animate each segment whenever the score changes.
+            segment.setOpacity(0.35);
+            Timeline fillAnimation = new Timeline(
+                    new KeyFrame(Duration.ZERO, new KeyValue(segment.opacityProperty(), 0.35)),
+                    new KeyFrame(Duration.millis(180 + (i * 70)),
+                            new KeyValue(segment.opacityProperty(), shouldFill ? 1.0 : 0.55, Interpolator.EASE_BOTH))
+            );
+            fillAnimation.play();
         }
     }
 
