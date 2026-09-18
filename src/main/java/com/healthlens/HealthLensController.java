@@ -52,7 +52,10 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.Arc;
+import javafx.scene.shape.ArcType;
 import javafx.scene.shape.Circle;
+import javafx.scene.shape.StrokeLineCap;
 import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
@@ -916,9 +919,33 @@ public class HealthLensController {
         }
         recommendationStatusLabel.setText("Updated in background • " + result.summary);
 
-        GridPane grid = new GridPane();
-        grid.setHgap(12);
-        grid.setVgap(12);
+        VBox dashboard = new VBox(18);
+        dashboard.getStyleClass().add("smart-recommendations-dashboard");
+
+        HBox rings = new HBox(16);
+        rings.setAlignment(javafx.geometry.Pos.CENTER);
+        rings.getStyleClass().add("recommendation-ring-row");
+        rings.getChildren().addAll(
+                createRingCard("Sleep", result.sleepProgress, result.sleepText, "#a78bfa"),
+                createRingCard("Water", result.waterProgress, result.waterText, "#38bdf8"),
+                createRingCard("Exercise", result.exerciseProgress, result.exerciseText, "#4ade80"),
+                createRingCard("Overall", result.overallProgress, result.overallText, "#60a5fa")
+        );
+
+        VBox nutrition = new VBox(12);
+        nutrition.getStyleClass().add("recommendation-card");
+        Label nutritionTitle = new Label("Nutrition targets");
+        nutritionTitle.getStyleClass().add("recommendation-section-title");
+        Label nutritionSubtitle = new Label("Fill the bars as you log your daily nutrition.");
+        nutritionSubtitle.getStyleClass().add("recommendations-intro");
+        nutrition.getChildren().addAll(nutritionTitle, nutritionSubtitle);
+        nutrition.getChildren().add(createNutritionRow("Protein", result.proteinCurrent, result.proteinTarget, "#60a5fa"));
+        nutrition.getChildren().add(createNutritionRow("Calories", result.caloriesCurrent, result.caloriesTarget, "#4ade80"));
+        nutrition.getChildren().add(createNutritionRow("Water", result.waterCurrent, result.waterTarget, "#38bdf8"));
+
+        GridPane actionGrid = new GridPane();
+        actionGrid.setHgap(12);
+        actionGrid.setVgap(12);
         for (int i = 0; i < result.cards.size(); i++) {
             RecommendationCardData data = result.cards.get(i);
             VBox card = new VBox(7);
@@ -929,10 +956,61 @@ public class HealthLensController {
             message.setWrapText(true);
             message.getStyleClass().add(data.attention ? "recommendation-attention" : "recommendation-positive");
             card.getChildren().addAll(title, message);
-            grid.add(card, i % 2, i / 2);
+            actionGrid.add(card, i % 2, i / 2);
             GridPane.setHgrow(card, Priority.ALWAYS);
         }
-        recommendationsContent.getChildren().add(grid);
+
+        dashboard.getChildren().addAll(rings, nutrition, actionGrid);
+        recommendationsContent.getChildren().add(dashboard);
+    }
+
+    private VBox createRingCard(String title, double progress, String centerText, String color) {
+        VBox box = new VBox(6);
+        box.setAlignment(javafx.geometry.Pos.CENTER);
+        box.getStyleClass().add("recommendation-ring-card");
+
+        StackPane ringPane = new StackPane();
+        ringPane.setPrefSize(132, 132);
+        Circle track = new Circle(48);
+        track.setFill(Color.TRANSPARENT);
+        track.setStroke(Color.web("#30344b"));
+        track.setStrokeWidth(10);
+
+        Arc fill = new Arc(0, 0, 48, 48, 90, -360 * Math.max(0, Math.min(1, progress)));
+        fill.setType(ArcType.OPEN);
+        fill.setFill(Color.TRANSPARENT);
+        fill.setStroke(Color.web(color));
+        fill.setStrokeWidth(10);
+        fill.setStrokeLineCap(StrokeLineCap.ROUND);
+
+        Label center = new Label(centerText);
+        center.getStyleClass().add("recommendation-ring-value");
+        ringPane.getChildren().addAll(track, fill, center);
+
+        Label name = new Label(title);
+        name.getStyleClass().add("recommendation-ring-title");
+        box.getChildren().addAll(ringPane, name);
+        return box;
+    }
+
+    private VBox createNutritionRow(String labelText, double current, double target, String color) {
+        VBox row = new VBox(4);
+        HBox header = new HBox(8);
+        header.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+        Label name = new Label(labelText);
+        name.getStyleClass().add("nutrition-row-label");
+        Label value = new Label(String.format(Locale.US, "%.0f / %.0f", current, target));
+        value.getStyleClass().add("nutrition-row-value");
+        javafx.scene.layout.Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+        header.getChildren().addAll(name, spacer, value);
+
+        ProgressBar bar = new ProgressBar(target <= 0 ? 0 : Math.max(0, Math.min(1, current / target)));
+        bar.setMaxWidth(Double.MAX_VALUE);
+        bar.getStyleClass().add("recommendation-progress-bar");
+        bar.setStyle("-fx-accent: " + color + ";");
+        row.getChildren().addAll(header, bar);
+        return row;
     }
 
     private void applyStylesToScene(Scene scene) {
@@ -959,7 +1037,23 @@ public class HealthLensController {
 
     private static final class RecommendationResult {
         final List<RecommendationCardData> cards; final String summary;
-        RecommendationResult(List<RecommendationCardData> cards, String summary) { this.cards = cards; this.summary = summary; }
+        final double sleepProgress, waterProgress, exerciseProgress, overallProgress;
+        final String sleepText, waterText, exerciseText, overallText;
+        final double proteinCurrent, proteinTarget, caloriesCurrent, caloriesTarget, waterCurrent, waterTarget;
+
+        RecommendationResult(List<RecommendationCardData> cards, String summary,
+                             double sleepProgress, double waterProgress, double exerciseProgress, double overallProgress,
+                             String sleepText, String waterText, String exerciseText, String overallText,
+                             double proteinCurrent, double proteinTarget, double caloriesCurrent, double caloriesTarget,
+                             double waterCurrent, double waterTarget) {
+            this.cards = cards; this.summary = summary;
+            this.sleepProgress = sleepProgress; this.waterProgress = waterProgress;
+            this.exerciseProgress = exerciseProgress; this.overallProgress = overallProgress;
+            this.sleepText = sleepText; this.waterText = waterText; this.exerciseText = exerciseText; this.overallText = overallText;
+            this.proteinCurrent = proteinCurrent; this.proteinTarget = proteinTarget;
+            this.caloriesCurrent = caloriesCurrent; this.caloriesTarget = caloriesTarget;
+            this.waterCurrent = waterCurrent; this.waterTarget = waterTarget;
+        }
     }
 
     /** Pure worker-side logic: no JavaFX controls are accessed here. */
@@ -999,7 +1093,20 @@ public class HealthLensController {
 
             int attentionCount = 0;
             for (RecommendationCardData c : cards) if (c.attention) attentionCount++;
-            return new RecommendationResult(cards, attentionCount == 0 ? "All tracked areas are currently on target" : attentionCount + " area(s) need attention");
+
+            double sleepProgress = Math.min(1.0, s.sleep / 8.0);
+            double waterProgress = s.waterGoal <= 0 ? 0 : Math.min(1.0, s.water / s.waterGoal);
+            double exerciseProgress = s.exerciseGoal <= 0 ? 0 : Math.min(1.0, s.exercise / s.exerciseGoal);
+            double overallProgress = (sleepProgress + waterProgress + exerciseProgress + (1.0 - Math.min(1.0, s.stress / 10.0))) / 4.0;
+            double proteinTarget = Math.max(75, Math.round(75 + (s.exercise * 0.35)));
+            return new RecommendationResult(cards,
+                    attentionCount == 0 ? "All tracked areas are currently on target" : attentionCount + " area(s) need attention",
+                    sleepProgress, waterProgress, exerciseProgress, overallProgress,
+                    String.format(Locale.US, "%.1fh / 8h", s.sleep),
+                    String.format(Locale.US, "%.0f / %.0f", s.water, s.waterGoal),
+                    String.format(Locale.US, "%.0f / %.0f min", s.exercise, s.exerciseGoal),
+                    String.format(Locale.US, "%.0f%%", overallProgress * 100),
+                    0, proteinTarget, 0, estimatedCalories, s.water, s.waterGoal);
         }
     }
 

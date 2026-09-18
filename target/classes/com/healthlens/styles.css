@@ -410,3 +410,14 @@
 .recommendation-card { -fx-padding: 14px; -fx-background-radius: 14px; -fx-border-radius: 14px; -fx-pref-width: 320px; -fx-min-height: 105px; }
 .recommendation-card-attention { -fx-border-color: #d97706; -fx-border-width: 1px; }
 .recommendation-card-positive { -fx-border-color: #16a34a; -fx-border-width: 1px; }
+
+/* Circular smart recommendation dashboard */
+.recommendation-ring-row { -fx-padding: 8 0 8 0; }
+.recommendation-ring-card { -fx-padding: 12; -fx-background-color: rgba(99,102,241,0.07); -fx-background-radius: 16; }
+.recommendation-ring-value { -fx-font-size: 15px; -fx-font-weight: bold; }
+.recommendation-ring-title { -fx-font-size: 13px; -fx-font-weight: bold; }
+.recommendation-section-title { -fx-font-size: 17px; -fx-font-weight: bold; }
+.nutrition-row-label, .nutrition-row-value { -fx-font-size: 13px; -fx-font-weight: bold; }
+.recommendation-progress-bar { -fx-pref-height: 11px; -fx-background-radius: 8px; }
+.recommendation-progress-bar > .track { -fx-background-radius: 8px; }
+.recommendation-progress-bar > .bar { -fx-background-radius: 8px; }
