@@ -137,7 +137,7 @@ public class HealthLensController {
     // --- Outputs: summary ---
     @FXML private Label overallScoreLabel;
     @FXML private Label summaryLabel;
-    @FXML private VBox batterySegments;
+    @FXML private HBox batterySegments;
     @FXML private Label batteryPercentLabel;
 
     private final List<Region> batterySegmentNodes = new ArrayList<>();
