@@ -827,6 +827,58 @@ public class HealthLensController {
                 healthData.getStressComfortMax()));
     }
 
+    /** Opens a separate recommendations window based on the current dashboard inputs. */
+    @FXML
+    private void handleOpenRecommendations() {
+        VBox content = new VBox(12);
+        content.getStyleClass().add("recommendations-content");
+        content.setPadding(new Insets(18));
+
+        Label heading = new Label("Your Personalized Health Recommendations");
+        heading.getStyleClass().add("recommendations-heading");
+        Label intro = new Label("Suggestions are based on your current entries and are not medical advice.");
+        intro.getStyleClass().add("recommendations-intro");
+        content.getChildren().addAll(heading, intro);
+
+        addRecommendation(content, "💤 Sleep", sleepSlider.getValue() < 7,
+                "Try to build a consistent sleep routine and aim for around 7–9 hours.",
+                "Your sleep duration is within a reasonable daily range. Keep your sleep schedule consistent.");
+        addRecommendation(content, "💧 Hydration", waterSlider.getValue() < healthData.getWaterGoalGlasses(),
+                "Your water intake is below your configured goal. Drink water regularly throughout the day.",
+                "You are meeting your configured water goal. Continue spreading your intake across the day.");
+        addRecommendation(content, "🏃 Exercise", exerciseSlider.getValue() < healthData.getExerciseGoalMinutes(),
+                "Your exercise is below your daily goal. Consider a manageable walk or light activity.",
+                "You are meeting your exercise goal. Maintain a routine that feels sustainable.");
+        addRecommendation(content, "🧠 Stress", stressSlider.getValue() >= 7,
+                "Your stress level is high. Try guided breathing, a short break, or talking to someone you trust.",
+                "Your reported stress level is not in the high range. Keep using healthy coping habits.");
+        addRecommendation(content, "🙂 Mood", "Low".equalsIgnoreCase(moodChoiceBox.getValue()) || "Stressed".equalsIgnoreCase(moodChoiceBox.getValue()),
+                "Your selected mood suggests you may benefit from rest, support, or a calming activity.",
+                "Your selected mood is positive or neutral. Continue activities that support your wellbeing.");
+
+        Dialog<Void> dialog = new Dialog<>();
+        dialog.setTitle("Personalized Health Recommendations");
+        dialog.setHeaderText(null);
+        dialog.getDialogPane().setContent(content);
+        dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
+        dialog.getDialogPane().getStyleClass().add("recommendations-dialog");
+        dialog.getDialogPane().setPrefWidth(560);
+        dialog.showAndWait();
+    }
+
+    private void addRecommendation(VBox content, String title, boolean needsAttention,
+                                   String attentionText, String positiveText) {
+        VBox card = new VBox(5);
+        card.getStyleClass().add("recommendation-card");
+        Label titleLabel = new Label(title);
+        titleLabel.getStyleClass().add("recommendation-title");
+        Label message = new Label(needsAttention ? attentionText : positiveText);
+        message.setWrapText(true);
+        message.getStyleClass().add(needsAttention ? "recommendation-attention" : "recommendation-positive");
+        card.getChildren().addAll(titleLabel, message);
+        content.getChildren().add(card);
+    }
+
     @FXML
     private void handleReset() {
         healthData.resetEntriesToDefaults();
@@ -861,16 +913,16 @@ public class HealthLensController {
         batterySegments.getChildren().clear();
         batterySegmentNodes.clear();
 
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < 10; i++) {
             Region segment = new Region();
             segment.getStyleClass().add("battery-segment");
-            segment.setPrefSize(38, 10);
-            segment.setMinSize(38, 10);
-            segment.setMaxSize(38, 10);
+            segment.setPrefSize(9, 30);
+            segment.setMinSize(9, 30);
+            segment.setMaxSize(9, 30);
             batterySegmentNodes.add(segment);
         }
 
-        // Add from low to high so the VBox fills from the bottom visually.
+        // Add segments from left to right like a mobile battery indicator.
         batterySegments.getChildren().addAll(batterySegmentNodes);
         batteryPercentLabel.setTooltip(new Tooltip("Battery percentage is calculated from your overall health score."));
     }
@@ -878,7 +930,7 @@ public class HealthLensController {
     /** Updates the battery using the existing overall health score. */
     private void updateBatteryIndicator(ScoreResult result) {
         int percent = result.getOverallPercent();
-        int filledSegments = (int) Math.ceil(percent / 20.0);
+        int filledSegments = (int) Math.ceil(percent / 10.0);
         String batteryTier = "battery-" + result.getTier();
 
         batteryPercentLabel.setText(percent + "%");
@@ -894,7 +946,7 @@ public class HealthLensController {
         for (int i = 0; i < batterySegmentNodes.size(); i++) {
             Region segment = batterySegmentNodes.get(i);
             segment.getStyleClass().removeAll("battery-filled", "battery-empty", "battery-good", "battery-medium", "battery-poor");
-            boolean shouldFill = i >= 5 - filledSegments;
+            boolean shouldFill = i < filledSegments;
             if (shouldFill) {
                 segment.getStyleClass().addAll("battery-filled", batteryTier);
             } else {

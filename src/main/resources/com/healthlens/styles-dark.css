@@ -297,3 +297,53 @@
 .battery-good { -fx-text-fill: #4ade80; }
 .battery-medium { -fx-text-fill: #fbbf24; }
 .battery-poor { -fx-text-fill: #f87171; }
+
+/* Redesigned horizontal battery indicator */
+.battery-shell {
+    -fx-pref-width: 132px;
+    -fx-pref-height: 48px;
+    -fx-min-width: 132px;
+    -fx-min-height: 48px;
+    -fx-max-width: 132px;
+    -fx-max-height: 48px;
+    -fx-padding: 7px 8px;
+    -fx-border-width: 2px;
+    -fx-border-radius: 9px;
+    -fx-background-radius: 9px;
+}
+.battery-terminal {
+    -fx-pref-width: 5px;
+    -fx-pref-height: 16px;
+    -fx-max-width: 5px;
+    -fx-max-height: 16px;
+    -fx-translate-x: 70px;
+    -fx-background-radius: 0 3px 3px 0;
+}
+.battery-segments { -fx-alignment: center-left; }
+.battery-segment { -fx-background-radius: 3px; }
+
+
+/* ===================== PERSONALIZED RECOMMENDATIONS ===================== */
+.recommendations-button {
+    -fx-background-color: #6366f1;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-background-radius: 10;
+    -fx-padding: 10 14;
+    -fx-cursor: hand;
+}
+.recommendations-button:hover { -fx-background-color: #4f46e5; }
+.recommendations-content { -fx-background-color: transparent; }
+.recommendations-heading { -fx-font-size: 20px; -fx-font-weight: bold; }
+.recommendations-intro { -fx-font-size: 12px; -fx-opacity: 0.8; }
+.recommendation-card {
+    -fx-padding: 12;
+    -fx-background-radius: 10;
+    -fx-border-radius: 10;
+    -fx-border-width: 1;
+    -fx-border-color: rgba(99,102,241,0.30);
+    -fx-background-color: rgba(99,102,241,0.08);
+}
+.recommendation-title { -fx-font-size: 14px; -fx-font-weight: bold; }
+.recommendation-attention { -fx-text-fill: #d97706; }
+.recommendation-positive { -fx-text-fill: #16a34a; }

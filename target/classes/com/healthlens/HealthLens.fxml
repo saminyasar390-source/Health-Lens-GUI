@@ -188,6 +188,13 @@
                         </tooltip>
                     </Button>
 
+                    <Button fx:id="recommendationsButton" mnemonicParsing="false" onAction="#handleOpenRecommendations"
+                            styleClass="recommendations-button" text="🧠 Personalized Health Recommendations" wrapText="true">
+                        <tooltip>
+                            <Tooltip text="View personalized suggestions based on your current health inputs" />
+                        </tooltip>
+                    </Button>
+
                     <Label styleClass="hint-label" text="Tip: press Enter to update the dashboard" />
 
                 </VBox>
@@ -235,7 +242,7 @@
                         <HBox alignment="CENTER_LEFT" spacing="12.0">
                             <StackPane styleClass="battery-shell">
                                 <Region styleClass="battery-terminal" />
-                                <VBox fx:id="batterySegments" alignment="BOTTOM_CENTER" spacing="3.0" styleClass="battery-segments" />
+                                <HBox fx:id="batterySegments" alignment="CENTER_LEFT" spacing="3.0" styleClass="battery-segments" />
                             </StackPane>
                             <VBox spacing="2.0" alignment="CENTER_LEFT">
                                 <Label fx:id="batteryPercentLabel" styleClass="battery-percent-label" text="--%" />
