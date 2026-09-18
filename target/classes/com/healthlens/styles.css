@@ -122,7 +122,8 @@
     -fx-min-height: 34;
     -fx-max-width: 34;
     -fx-max-height: 34;
-    -fx-font-size: 14px;
+    -fx-font-family: "Segoe UI Symbol";
+    -fx-font-size: 16px;
     -fx-cursor: hand;
     -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 4, 0.1, 0, 1);
 }

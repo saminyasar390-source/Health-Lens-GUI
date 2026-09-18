@@ -319,7 +319,7 @@ public class HealthLensController {
     /** Shows the unread count on the bell, the way any notification UI does. */
     private void updateNotificationBadge() {
         int unread = services.getNotificationCenter().getUnreadCount();
-        activityCenterButton.setText(unread == 0 ? "\uD83D\uDD14" : "\uD83D\uDD14 " + unread);
+        activityCenterButton.setText(unread == 0 ? "▥" : "▥ " + unread);
     }
 
     // ===================== GUIDED BREATHING =====================
@@ -496,7 +496,7 @@ public class HealthLensController {
         String stylesheet = darkMode ? "styles-dark.css" : "styles.css";
         scene.getStylesheets().clear();
         scene.getStylesheets().add(getClass().getResource(stylesheet).toExternalForm());
-        themeToggleButton.setText(darkMode ? "☀" : "🌙");
+        themeToggleButton.setText(darkMode ? "☀" : "◐");
     }
 
     // ===================== PROFILE (AVATAR / EMAIL / BACKGROUND) =====================

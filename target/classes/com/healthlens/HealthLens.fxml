@@ -60,7 +60,7 @@
                             <ImageView fx:id="profileImageView" fitHeight="34.0" fitWidth="34.0" visible="false" />
                         </StackPane>
                         <Button fx:id="themeToggleButton" mnemonicParsing="false" onAction="#handleToggleTheme"
-                                styleClass="icon-button" text="🌗">
+                                styleClass="icon-button" text="◐">
                             <tooltip>
                                 <Tooltip text="Switch between light and dark theme" />
                             </tooltip>
@@ -72,13 +72,13 @@
                             </tooltip>
                         </Button>
                         <Button fx:id="chatButton" mnemonicParsing="false" onAction="#handleOpenChat"
-                                styleClass="icon-button" text="🗨">
+                                styleClass="icon-button" text="✉">
                             <tooltip>
                                 <Tooltip text="Tell the assistant about your day and it fills in the dashboard" />
                             </tooltip>
                         </Button>
                         <Button fx:id="activityCenterButton" mnemonicParsing="false" onAction="#handleOpenActivityCenter"
-                                styleClass="icon-button" text="📈">
+                                styleClass="icon-button" text="▥">
                             <tooltip>
                                 <Tooltip text="Activity Centre — your reminders, your data sources, and what HealthLens is doing in the background" />
                             </tooltip>
