@@ -16,6 +16,7 @@
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.Region?>
 <?import javafx.scene.shape.Circle?>
 
 <!--
@@ -76,10 +77,10 @@
                                 <Tooltip text="Tell the assistant about your day and it fills in the dashboard" />
                             </tooltip>
                         </Button>
-                        <Button fx:id="concurrencyLabButton" mnemonicParsing="false" onAction="#handleOpenConcurrencyLab"
-                                styleClass="icon-button" text="📡">
+                        <Button fx:id="activityCenterButton" mnemonicParsing="false" onAction="#handleOpenActivityCenter"
+                                styleClass="icon-button" text="🔔">
                             <tooltip>
-                                <Tooltip text="Activity Monitor — see device syncing and notifications running in the background" />
+                                <Tooltip text="Activity Centre — your reminders, your data sources, and what HealthLens is doing in the background" />
                             </tooltip>
                         </Button>
                     </HBox>
@@ -183,7 +184,7 @@
                     <Button fx:id="syncButton" mnemonicParsing="false" onAction="#handleSyncWithDevice"
                             styleClass="reset-button" text="🔄 Sync All Sources">
                         <tooltip>
-                            <Tooltip text="Fetches from smartwatch, pedometer, and water log in parallel (ExecutorService + Callable + Future)" />
+                            <Tooltip text="Fetches every connected source at the same time instead of one after another" />
                         </tooltip>
                     </Button>
 
@@ -229,8 +230,18 @@
                     </BarChart>
 
                     <!-- Summary -->
-                    <VBox styleClass="summary-box" spacing="4.0">
-                        <Label fx:id="overallScoreLabel" styleClass="overall-score-label" text="Overall Score: --" />
+                    <VBox styleClass="summary-box" spacing="8.0">
+                        <Label styleClass="overall-score-heading" text="Daily Health Battery" />
+                        <HBox alignment="CENTER_LEFT" spacing="12.0">
+                            <StackPane styleClass="battery-shell">
+                                <Region styleClass="battery-terminal" />
+                                <VBox fx:id="batterySegments" alignment="BOTTOM_CENTER" spacing="3.0" styleClass="battery-segments" />
+                            </StackPane>
+                            <VBox spacing="2.0" alignment="CENTER_LEFT">
+                                <Label fx:id="batteryPercentLabel" styleClass="battery-percent-label" text="--%" />
+                                <Label fx:id="overallScoreLabel" styleClass="overall-score-label" text="Overall Score: --" />
+                            </VBox>
+                        </HBox>
                         <Label fx:id="summaryLabel" styleClass="summary-text" text="Fill in your habits and click &quot;Update Dashboard&quot; to see your summary."
                                wrapText="true" />
                     </VBox>

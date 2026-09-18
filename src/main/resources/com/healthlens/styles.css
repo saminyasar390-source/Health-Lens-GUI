@@ -324,3 +324,56 @@
 .lab-window .tab-pane .tab:selected {
     -fx-background-color: #f4f6f8;
 }
+
+/* ===================== HEALTH BATTERY INDICATOR ===================== */
+.overall-score-heading {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #223047;
+}
+
+.battery-shell {
+    -fx-pref-width: 54px;
+    -fx-pref-height: 72px;
+    -fx-min-width: 54px;
+    -fx-min-height: 72px;
+    -fx-max-width: 54px;
+    -fx-max-height: 72px;
+    -fx-padding: 8px 5px;
+    -fx-border-color: #64748b;
+    -fx-border-width: 2px;
+    -fx-border-radius: 7px;
+    -fx-background-color: rgba(148, 163, 184, 0.12);
+    -fx-background-radius: 7px;
+}
+
+.battery-terminal {
+    -fx-pref-width: 18px;
+    -fx-pref-height: 4px;
+    -fx-max-width: 18px;
+    -fx-max-height: 4px;
+    -fx-translate-y: -38px;
+    -fx-background-color: #64748b;
+    -fx-background-radius: 3px;
+}
+
+.battery-segments {
+    -fx-alignment: bottom-center;
+}
+
+.battery-segment {
+    -fx-background-radius: 2px;
+}
+
+.battery-filled.battery-good { -fx-background-color: #22c55e; }
+.battery-filled.battery-medium { -fx-background-color: #f59e0b; }
+.battery-filled.battery-poor { -fx-background-color: #ef4444; }
+.battery-empty { -fx-background-color: rgba(100, 116, 139, 0.22); }
+
+.battery-percent-label {
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
+}
+.battery-good { -fx-text-fill: #16a34a; }
+.battery-medium { -fx-text-fill: #d97706; }
+.battery-poor { -fx-text-fill: #dc2626; }

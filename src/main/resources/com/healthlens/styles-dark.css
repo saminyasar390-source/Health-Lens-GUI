@@ -284,3 +284,15 @@
 .lab-window .tab-pane .tab .tab-label {
     -fx-text-fill: #e2e8f0;
 }
+
+/* ===================== HEALTH BATTERY INDICATOR ===================== */
+.overall-score-heading { -fx-text-fill: #e2e8f0; }
+.battery-shell { -fx-border-color: #94a3b8; -fx-background-color: rgba(51, 65, 85, 0.45); }
+.battery-terminal { -fx-background-color: #94a3b8; }
+.battery-empty { -fx-background-color: rgba(148, 163, 184, 0.22); }
+.battery-filled.battery-good { -fx-background-color: #4ade80; }
+.battery-filled.battery-medium { -fx-background-color: #fbbf24; }
+.battery-filled.battery-poor { -fx-background-color: #f87171; }
+.battery-good { -fx-text-fill: #4ade80; }
+.battery-medium { -fx-text-fill: #fbbf24; }
+.battery-poor { -fx-text-fill: #f87171; }

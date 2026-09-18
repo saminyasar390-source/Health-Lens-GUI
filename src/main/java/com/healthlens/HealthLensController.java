@@ -47,6 +47,7 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
@@ -135,6 +136,10 @@ public class HealthLensController {
     // --- Outputs: summary ---
     @FXML private Label overallScoreLabel;
     @FXML private Label summaryLabel;
+    @FXML private VBox batterySegments;
+    @FXML private Label batteryPercentLabel;
+
+    private final List<Region> batterySegmentNodes = new ArrayList<>();
 
     /** THE MODEL. Everything about "what the data means" is delegated to this + ScoreCalculator. */
     private final HealthData healthData = new HealthData();
@@ -156,6 +161,7 @@ public class HealthLensController {
         updateGoalLabels();
         applyThemeWhenSceneReady();
         setupProfileAvatar();
+        setupBatteryIndicator();
         Tooltip.install(profileAvatarStack, new Tooltip("Your profile — click to change picture, email, or background"));
         startBackgroundServices();
 
@@ -849,8 +855,48 @@ public class HealthLensController {
         timeline.play();
     }
 
+    /** Creates the five visual segments used by the mobile-style battery indicator. */
+    private void setupBatteryIndicator() {
+        batterySegments.getChildren().clear();
+        batterySegmentNodes.clear();
+
+        for (int i = 0; i < 5; i++) {
+            Region segment = new Region();
+            segment.getStyleClass().add("battery-segment");
+            segment.setPrefSize(38, 10);
+            segment.setMinSize(38, 10);
+            segment.setMaxSize(38, 10);
+            batterySegmentNodes.add(segment);
+        }
+
+        // Add from low to high so the VBox fills from the bottom visually.
+        batterySegments.getChildren().addAll(batterySegmentNodes);
+    }
+
+    /** Updates the battery using the existing overall health score. */
+    private void updateBatteryIndicator(ScoreResult result) {
+        int percent = result.getOverallPercent();
+        int filledSegments = (int) Math.ceil(percent / 20.0);
+        String batteryTier = "battery-" + result.getTier();
+
+        batteryPercentLabel.setText(percent + "%");
+        batteryPercentLabel.getStyleClass().removeAll("battery-good", "battery-medium", "battery-poor");
+        batteryPercentLabel.getStyleClass().add(batteryTier);
+
+        for (int i = 0; i < batterySegmentNodes.size(); i++) {
+            Region segment = batterySegmentNodes.get(i);
+            segment.getStyleClass().removeAll("battery-filled", "battery-empty", "battery-good", "battery-medium", "battery-poor");
+            if (i >= 5 - filledSegments) {
+                segment.getStyleClass().addAll("battery-filled", batteryTier);
+            } else {
+                segment.getStyleClass().add("battery-empty");
+            }
+        }
+    }
+
     /** Pure UI work: takes a ScoreResult from the Model and displays it. No scoring logic here. */
     private void renderSummary(ScoreResult result) {
+        updateBatteryIndicator(result);
         overallScoreLabel.setText("Overall Score: " + result.getOverallPercent() + "%");
 
         overallScoreLabel.getStyleClass().removeAll("score-good", "score-medium", "score-poor");

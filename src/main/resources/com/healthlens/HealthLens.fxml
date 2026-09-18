@@ -16,6 +16,7 @@
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.Region?>
 <?import javafx.scene.shape.Circle?>
 
 <!--
@@ -229,8 +230,18 @@
                     </BarChart>
 
                     <!-- Summary -->
-                    <VBox styleClass="summary-box" spacing="4.0">
-                        <Label fx:id="overallScoreLabel" styleClass="overall-score-label" text="Overall Score: --" />
+                    <VBox styleClass="summary-box" spacing="8.0">
+                        <Label styleClass="overall-score-heading" text="Daily Health Battery" />
+                        <HBox alignment="CENTER_LEFT" spacing="12.0">
+                            <StackPane styleClass="battery-shell">
+                                <Region styleClass="battery-terminal" />
+                                <VBox fx:id="batterySegments" alignment="BOTTOM_CENTER" spacing="3.0" styleClass="battery-segments" />
+                            </StackPane>
+                            <VBox spacing="2.0" alignment="CENTER_LEFT">
+                                <Label fx:id="batteryPercentLabel" styleClass="battery-percent-label" text="--%" />
+                                <Label fx:id="overallScoreLabel" styleClass="overall-score-label" text="Overall Score: --" />
+                            </VBox>
+                        </HBox>
                         <Label fx:id="summaryLabel" styleClass="summary-text" text="Fill in your habits and click &quot;Update Dashboard&quot; to see your summary."
                                wrapText="true" />
                     </VBox>
