@@ -11,11 +11,13 @@ import com.healthlens.concurrency.SyncService;
 import com.healthlens.model.HealthData;
 import com.healthlens.model.ScoreCalculator;
 import com.healthlens.model.ScoreResult;
+import com.healthlens.json.JsonHealthService;
 
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.PauseTransition;
+import javafx.animation.ScaleTransition;
 import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
@@ -40,6 +42,8 @@ import javafx.scene.control.Slider;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.SpinnerValueFactory;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TextArea;
+import javafx.scene.control.TextInputDialog;
 import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -47,10 +51,14 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.Arc;
+import javafx.scene.shape.ArcType;
 import javafx.scene.shape.Circle;
+import javafx.scene.shape.StrokeLineCap;
 import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
@@ -58,10 +66,14 @@ import javafx.util.Duration;
 
 import java.io.File;
 import java.io.InputStream;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.prefs.Preferences;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * CONTROLLER for HealthLens.fxml.
@@ -115,6 +127,7 @@ public class HealthLensController {
     @FXML private Button updateButton;
     @FXML private Button resetButton;
     @FXML private Button syncButton;
+    @FXML private Button jsonButton;
 
     // --- Outputs: progress bars + goal labels ---
     @FXML private ProgressBar sleepBar;
@@ -135,6 +148,21 @@ public class HealthLensController {
     // --- Outputs: summary ---
     @FXML private Label overallScoreLabel;
     @FXML private Label summaryLabel;
+    @FXML private HBox batterySegments;
+    @FXML private Label batteryPercentLabel;
+
+    private final List<Region> batterySegmentNodes = new ArrayList<>();
+
+    // Recommendation engine: calculations run off the JavaFX Application Thread.
+    private final ExecutorService recommendationExecutor = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "healthlens-recommendation-worker");
+        t.setDaemon(true);
+        return t;
+    });
+    private final AtomicLong recommendationVersion = new AtomicLong();
+    private Stage recommendationsStage;
+    private VBox recommendationsContent;
+    private Label recommendationStatusLabel;
 
     /** THE MODEL. Everything about "what the data means" is delegated to this + ScoreCalculator. */
     private final HealthData healthData = new HealthData();
@@ -156,6 +184,7 @@ public class HealthLensController {
         updateGoalLabels();
         applyThemeWhenSceneReady();
         setupProfileAvatar();
+        setupBatteryIndicator();
         Tooltip.install(profileAvatarStack, new Tooltip("Your profile — click to change picture, email, or background"));
         startBackgroundServices();
 
@@ -237,8 +266,15 @@ public class HealthLensController {
         exerciseSlider.valueProperty().addListener((obs, oldV, newV) ->
                 exerciseValueLabel.setText(String.format(Locale.US, "%d min", Math.round(newV.doubleValue()))));
 
-        stressSlider.valueProperty().addListener((obs, oldV, newV) ->
-                stressValueLabel.setText(String.format(Locale.US, "%d", Math.round(newV.doubleValue()))));
+        stressSlider.valueProperty().addListener((obs, oldV, newV) -> {
+            stressValueLabel.setText(String.format(Locale.US, "%d", Math.round(newV.doubleValue())));
+            requestRecommendationRefresh();
+        });
+
+        sleepSlider.valueProperty().addListener((obs, oldV, newV) -> requestRecommendationRefresh());
+        waterSlider.valueProperty().addListener((obs, oldV, newV) -> requestRecommendationRefresh());
+        exerciseSlider.valueProperty().addListener((obs, oldV, newV) -> requestRecommendationRefresh());
+        moodChoiceBox.valueProperty().addListener((obs, oldV, newV) -> requestRecommendationRefresh());
     }
 
     private void setupChart() {
@@ -289,7 +325,7 @@ public class HealthLensController {
             if (newScene != null) {
                 newScene.windowProperty().addListener((o2, oldWindow, newWindow) -> {
                     if (newWindow != null) {
-                        newWindow.setOnCloseRequest(e -> services.shutdown());
+                        newWindow.setOnCloseRequest(e -> { services.shutdown(); recommendationExecutor.shutdownNow(); });
                     }
                 });
             }
@@ -313,7 +349,7 @@ public class HealthLensController {
     /** Shows the unread count on the bell, the way any notification UI does. */
     private void updateNotificationBadge() {
         int unread = services.getNotificationCenter().getUnreadCount();
-        activityCenterButton.setText(unread == 0 ? "\uD83D\uDD14" : "\uD83D\uDD14 " + unread);
+        activityCenterButton.setText(unread == 0 ? "▥" : "▥ " + unread);
     }
 
     // ===================== GUIDED BREATHING =====================
@@ -490,7 +526,7 @@ public class HealthLensController {
         String stylesheet = darkMode ? "styles-dark.css" : "styles.css";
         scene.getStylesheets().clear();
         scene.getStylesheets().add(getClass().getResource(stylesheet).toExternalForm());
-        themeToggleButton.setText(darkMode ? "☀" : "🌙");
+        themeToggleButton.setText(darkMode ? "☀" : "◐");
     }
 
     // ===================== PROFILE (AVATAR / EMAIL / BACKGROUND) =====================
@@ -820,6 +856,449 @@ public class HealthLensController {
                 healthData.getStressComfortMax()));
     }
 
+    /**
+     * Opens a separate smart recommendation dashboard. The worker thread calculates
+     * recommendations from an immutable snapshot, while Platform.runLater updates
+     * the JavaFX scene. This keeps the main GUI responsive and demonstrates
+     * producer/consumer-style concurrency.
+     */
+    @FXML
+    private void handleOpenRecommendations() {
+        if (recommendationsStage != null && recommendationsStage.isShowing()) {
+            recommendationsStage.toFront();
+            requestRecommendationRefresh();
+            return;
+        }
+
+        recommendationsContent = new VBox(14);
+        recommendationsContent.setPadding(new Insets(20));
+        recommendationsContent.getStyleClass().add("recommendations-content");
+
+        Label heading = new Label("Actions should be taken for better health");
+        heading.getStyleClass().add("recommendations-heading");
+        Label intro = new Label("Live recommendations update in the background as your dashboard values change.");
+        intro.setWrapText(true);
+        intro.getStyleClass().add("recommendations-intro");
+        recommendationStatusLabel = new Label("Preparing your recommendations...");
+        recommendationStatusLabel.getStyleClass().add("recommendation-status");
+        recommendationsContent.getChildren().addAll(heading, intro, recommendationStatusLabel);
+
+        recommendationsStage = new Stage();
+        recommendationsStage.setTitle("HealthLens • Smart Recommendations");
+        recommendationsStage.initModality(Modality.NONE);
+        recommendationsStage.setScene(new Scene(recommendationsContent, 720, 650));
+        applyStylesToScene(recommendationsStage.getScene());
+        recommendationsStage.setOnCloseRequest(event -> {
+            recommendationsStage = null;
+            recommendationsContent = null;
+            recommendationStatusLabel = null;
+        });
+        recommendationsStage.show();
+        requestRecommendationRefresh();
+    }
+
+    private void requestRecommendationRefresh() {
+        if (recommendationsContent == null || recommendationsStage == null || !recommendationsStage.isShowing()) {
+            return;
+        }
+
+        final long version = recommendationVersion.incrementAndGet();
+        final RecommendationSnapshot snapshot = new RecommendationSnapshot(
+                sleepSlider.getValue(), waterSlider.getValue(), exerciseSlider.getValue(),
+                stressSlider.getValue(), moodChoiceBox.getValue(),
+                healthData.getWaterGoalGlasses(), healthData.getExerciseGoalMinutes());
+
+        recommendationExecutor.submit(() -> {
+            RecommendationResult result = RecommendationEngine.generate(snapshot);
+            Platform.runLater(() -> {
+                if (version != recommendationVersion.get() || recommendationsContent == null) return;
+                renderRecommendations(result);
+            });
+        });
+    }
+
+    private void renderRecommendations(RecommendationResult result) {
+        // Keep the heading, intro, and status label; replace the previous card grid.
+        if (recommendationsContent.getChildren().size() > 3) {
+            recommendationsContent.getChildren().remove(3, recommendationsContent.getChildren().size());
+        }
+        recommendationStatusLabel.setText("Updated in background • " + result.summary);
+
+        VBox dashboard = new VBox(18);
+        dashboard.getStyleClass().add("smart-recommendations-dashboard");
+
+        HBox rings = new HBox(16);
+        rings.setAlignment(javafx.geometry.Pos.CENTER);
+        rings.getStyleClass().add("recommendation-ring-row");
+        rings.getChildren().addAll(
+                createRingCard("Sleep", result.sleepProgress, result.sleepText, "#a78bfa"),
+                createRingCard("Water", result.waterProgress, result.waterText, "#38bdf8"),
+                createRingCard("Exercise", result.exerciseProgress, result.exerciseText, "#4ade80"),
+                createRingCard("Overall", result.overallProgress, result.overallText, "#60a5fa")
+        );
+
+        VBox nutrition = new VBox(12);
+        nutrition.getStyleClass().add("recommendation-card");
+        Label nutritionTitle = new Label("Nutrition targets");
+        nutritionTitle.getStyleClass().add("recommendation-section-title");
+        Label nutritionSubtitle = new Label("Fill the bars as you log your daily nutrition.");
+        nutritionSubtitle.getStyleClass().add("recommendations-intro");
+        nutrition.getChildren().addAll(nutritionTitle, nutritionSubtitle);
+        nutrition.getChildren().add(createNutritionRow("Protein", result.proteinCurrent, result.proteinTarget, "#60a5fa"));
+        nutrition.getChildren().add(createNutritionRow("Calories", result.caloriesCurrent, result.caloriesTarget, "#4ade80"));
+        nutrition.getChildren().add(createNutritionRow("Water", result.waterCurrent, result.waterTarget, "#38bdf8"));
+
+        GridPane actionGrid = new GridPane();
+        actionGrid.setHgap(12);
+        actionGrid.setVgap(12);
+        for (int i = 0; i < result.cards.size(); i++) {
+            RecommendationCardData data = result.cards.get(i);
+            VBox card = new VBox(7);
+            card.getStyleClass().addAll("recommendation-card", data.attention ? "recommendation-card-attention" : "recommendation-card-positive");
+            Label title = new Label(data.title);
+            title.getStyleClass().add("recommendation-title");
+            Label message = new Label(data.message);
+            message.setWrapText(true);
+            message.getStyleClass().add(data.attention ? "recommendation-attention" : "recommendation-positive");
+            card.getChildren().addAll(title, message);
+            actionGrid.add(card, i % 2, i / 2);
+            GridPane.setHgrow(card, Priority.ALWAYS);
+        }
+
+        dashboard.getChildren().addAll(rings, nutrition, actionGrid);
+        recommendationsContent.getChildren().add(dashboard);
+    }
+
+    private VBox createRingCard(String title, double progress, String centerText, String color) {
+        VBox box = new VBox(6);
+        box.setAlignment(javafx.geometry.Pos.CENTER);
+        box.getStyleClass().add("recommendation-ring-card");
+
+        StackPane ringPane = new StackPane();
+        ringPane.setPrefSize(132, 132);
+        Circle track = new Circle(48);
+        track.setFill(Color.TRANSPARENT);
+        track.setStroke(Color.web("#30344b"));
+        track.setStrokeWidth(10);
+
+        Arc fill = new Arc(0, 0, 48, 48, 90, -360 * Math.max(0, Math.min(1, progress)));
+        fill.setType(ArcType.OPEN);
+        fill.setFill(Color.TRANSPARENT);
+        fill.setStroke(Color.web(color));
+        fill.setStrokeWidth(10);
+        fill.setStrokeLineCap(StrokeLineCap.ROUND);
+
+        Label center = new Label(centerText);
+        center.getStyleClass().add("recommendation-ring-value");
+        ringPane.getChildren().addAll(track, fill, center);
+
+        Label name = new Label(title);
+        name.getStyleClass().add("recommendation-ring-title");
+        box.getChildren().addAll(ringPane, name);
+        return box;
+    }
+
+    private VBox createNutritionRow(String labelText, double current, double target, String color) {
+        VBox row = new VBox(4);
+        HBox header = new HBox(8);
+        header.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+        Label name = new Label(labelText);
+        name.getStyleClass().add("nutrition-row-label");
+        Label value = new Label(String.format(Locale.US, "%.0f / %.0f", current, target));
+        value.getStyleClass().add("nutrition-row-value");
+        javafx.scene.layout.Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+        header.getChildren().addAll(name, spacer, value);
+
+        ProgressBar bar = new ProgressBar(target <= 0 ? 0 : Math.max(0, Math.min(1, current / target)));
+        bar.setMaxWidth(Double.MAX_VALUE);
+        bar.getStyleClass().add("recommendation-progress-bar");
+        bar.setStyle("-fx-accent: " + color + ";");
+        row.getChildren().addAll(header, bar);
+        return row;
+    }
+
+    private void applyStylesToScene(Scene scene) {
+        String css = getClass().getResource(darkMode ? "styles-dark.css" : "styles.css").toExternalForm();
+        scene.getStylesheets().add(css);
+    }
+
+    private static final class RecommendationSnapshot {
+        final double sleep, water, exercise, stress, waterGoal, exerciseGoal;
+        final String mood;
+        RecommendationSnapshot(double sleep, double water, double exercise, double stress,
+                                String mood, double waterGoal, double exerciseGoal) {
+            this.sleep = sleep; this.water = water; this.exercise = exercise; this.stress = stress;
+            this.mood = mood == null ? "Okay" : mood; this.waterGoal = waterGoal; this.exerciseGoal = exerciseGoal;
+        }
+    }
+
+    private static final class RecommendationCardData {
+        final String title, message; final boolean attention;
+        RecommendationCardData(String title, String message, boolean attention) {
+            this.title = title; this.message = message; this.attention = attention;
+        }
+    }
+
+    private static final class RecommendationResult {
+        final List<RecommendationCardData> cards; final String summary;
+        final double sleepProgress, waterProgress, exerciseProgress, overallProgress;
+        final String sleepText, waterText, exerciseText, overallText;
+        final double proteinCurrent, proteinTarget, caloriesCurrent, caloriesTarget, waterCurrent, waterTarget;
+
+        RecommendationResult(List<RecommendationCardData> cards, String summary,
+                             double sleepProgress, double waterProgress, double exerciseProgress, double overallProgress,
+                             String sleepText, String waterText, String exerciseText, String overallText,
+                             double proteinCurrent, double proteinTarget, double caloriesCurrent, double caloriesTarget,
+                             double waterCurrent, double waterTarget) {
+            this.cards = cards; this.summary = summary;
+            this.sleepProgress = sleepProgress; this.waterProgress = waterProgress;
+            this.exerciseProgress = exerciseProgress; this.overallProgress = overallProgress;
+            this.sleepText = sleepText; this.waterText = waterText; this.exerciseText = exerciseText; this.overallText = overallText;
+            this.proteinCurrent = proteinCurrent; this.proteinTarget = proteinTarget;
+            this.caloriesCurrent = caloriesCurrent; this.caloriesTarget = caloriesTarget;
+            this.waterCurrent = waterCurrent; this.waterTarget = waterTarget;
+        }
+    }
+
+    /** Pure worker-side logic: no JavaFX controls are accessed here. */
+    private static final class RecommendationEngine {
+        static RecommendationResult generate(RecommendationSnapshot s) {
+            List<RecommendationCardData> cards = new ArrayList<>();
+            boolean sleepAttention = s.sleep < 7;
+            cards.add(new RecommendationCardData("💤 Sleep",
+                    sleepAttention ? "Aim for a consistent 7–9 hour sleep window and reduce screen time before bed."
+                            : "Your sleep duration is in a reasonable range. Keep your sleep schedule consistent.", sleepAttention));
+
+            boolean waterAttention = s.water < s.waterGoal;
+            cards.add(new RecommendationCardData("💧 Hydration",
+                    waterAttention ? String.format(Locale.US, "You are %.0f glasses below your configured goal. Spread water intake across the day.", Math.max(0, s.waterGoal - s.water))
+                            : "You are meeting your configured water goal. Continue drinking regularly.", waterAttention));
+
+            boolean exerciseAttention = s.exercise < s.exerciseGoal;
+            cards.add(new RecommendationCardData("🏃 Exercise",
+                    exerciseAttention ? String.format(Locale.US, "Add about %.0f minutes of manageable movement, such as walking or stretching.", Math.max(0, s.exerciseGoal - s.exercise))
+                            : "You are meeting your exercise goal. Keep activity sustainable and include recovery.", exerciseAttention));
+
+            boolean stressAttention = s.stress >= 7;
+            cards.add(new RecommendationCardData("🧠 Stress",
+                    stressAttention ? "Your reported stress is high. Try paced breathing, a short break, or reaching out to someone you trust."
+                            : "Your reported stress is not in the high range. Continue using healthy coping habits.", stressAttention));
+
+            boolean moodAttention = "Low".equalsIgnoreCase(s.mood) || "Stressed".equalsIgnoreCase(s.mood);
+            cards.add(new RecommendationCardData("🙂 Mood",
+                    moodAttention ? "Consider rest, a calming activity, or talking with someone supportive."
+                            : "Keep activities that support your wellbeing and monitor changes in mood.", moodAttention));
+
+            int estimatedCalories = (int) Math.round(1900 + (s.exercise * 8) - (s.stress * 10));
+            estimatedCalories = Math.max(1600, Math.min(2800, estimatedCalories));
+            int estimatedProtein = (int) Math.round(75 + (s.exercise * 0.35));
+            cards.add(new RecommendationCardData("🍽 Nutrition targets",
+                    String.format(Locale.US, "Estimated starting point: around %,d kcal/day and %d g protein/day. Adjust with your personal needs and a qualified professional.", estimatedCalories, estimatedProtein), false));
+
+            int attentionCount = 0;
+            for (RecommendationCardData c : cards) if (c.attention) attentionCount++;
+
+            double sleepProgress = Math.min(1.0, s.sleep / 8.0);
+            double waterProgress = s.waterGoal <= 0 ? 0 : Math.min(1.0, s.water / s.waterGoal);
+            double exerciseProgress = s.exerciseGoal <= 0 ? 0 : Math.min(1.0, s.exercise / s.exerciseGoal);
+            double overallProgress = (sleepProgress + waterProgress + exerciseProgress + (1.0 - Math.min(1.0, s.stress / 10.0))) / 4.0;
+            double proteinTarget = Math.max(75, Math.round(75 + (s.exercise * 0.35)));
+            return new RecommendationResult(cards,
+                    attentionCount == 0 ? "All tracked areas are currently on target" : attentionCount + " area(s) need attention",
+                    sleepProgress, waterProgress, exerciseProgress, overallProgress,
+                    String.format(Locale.US, "%.1fh / 8h", s.sleep),
+                    String.format(Locale.US, "%.0f / %.0f", s.water, s.waterGoal),
+                    String.format(Locale.US, "%.0f / %.0f min", s.exercise, s.exerciseGoal),
+                    String.format(Locale.US, "%.0f%%", overallProgress * 100),
+                    0, proteinTarget, 0, estimatedCalories, s.water, s.waterGoal);
+        }
+    }
+
+    // ===================== JSON / API (WEEK 7) =====================
+
+    /**
+     * Demonstrates JSON serialization: Java HealthData object -> JSON text.
+     * The JSON is shown to the user so the structure can be inspected.
+     */
+    @FXML
+    private void handleOpenJson() {
+        try {
+            String json = JsonHealthService.toJson(healthData);
+
+            TextArea area = new TextArea(json);
+            area.setEditable(false);
+            area.setWrapText(false);
+            area.setPrefRowCount(18);
+            area.setPrefColumnCount(60);
+
+            Dialog<ButtonType> dialog = new Dialog<>();
+            dialog.setTitle("HealthLens - JSON Data");
+            dialog.setHeaderText("Current HealthData converted to JSON");
+            dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
+            dialog.getDialogPane().setContent(area);
+            dialog.showAndWait();
+        } catch (Exception e) {
+            showJsonError("Could not create JSON", e);
+        }
+    }
+
+    /**
+     * Demonstrates JSON deserialization: JSON text -> Java HealthData object.
+     * It also shows that parsed values can flow through the existing
+     * View -> Model -> View pipeline without rewriting the dashboard.
+     */
+    @FXML
+    private void handleImportJson() {
+        TextInputDialog input = new TextInputDialog();
+        input.setTitle("Import Health JSON");
+        input.setHeaderText("Paste a HealthLens JSON object");
+        input.setContentText("JSON:");
+
+        input.showAndWait().ifPresent(json -> {
+            try {
+                HealthData imported = JsonHealthService.fromJson(json);
+
+                healthData.setSleepHours(imported.getSleepHours());
+                healthData.setWaterGlasses(imported.getWaterGlasses());
+                healthData.setExerciseMinutes(imported.getExerciseMinutes());
+                healthData.setStressLevel(imported.getStressLevel());
+                if (imported.getMood() != null) {
+                    healthData.setMood(imported.getMood());
+                }
+
+                sleepSlider.setValue(clamp(healthData.getSleepHours(),
+                        sleepSlider.getMin(), sleepSlider.getMax()));
+                waterSlider.setValue(clamp(healthData.getWaterGlasses(),
+                        waterSlider.getMin(), waterSlider.getMax()));
+                exerciseSlider.setValue(clamp(healthData.getExerciseMinutes(),
+                        exerciseSlider.getMin(), exerciseSlider.getMax()));
+                stressSlider.setValue(clamp(healthData.getStressLevel(),
+                        stressSlider.getMin(), stressSlider.getMax()));
+                moodChoiceBox.setValue(healthData.getMood());
+
+                handleUpdate();
+            } catch (Exception e) {
+                showJsonError("Invalid JSON", e);
+            }
+        });
+    }
+
+    /**
+     * Demonstrates API URL response handling.
+     *
+     * The HTTP request and JSON parsing happen on a background thread.
+     * Platform.runLater() is used only for updating JavaFX controls.
+     */
+    @FXML
+    private void handleFetchJsonApi() {
+        ButtonType sampleButton = new ButtonType("Use Sample JSON");
+        ButtonType apiButton = new ButtonType("Fetch API URL");
+        ButtonType cancelButton = ButtonType.CANCEL;
+
+        Alert choice = new Alert(Alert.AlertType.CONFIRMATION);
+        choice.setTitle("Health API / JSON");
+        choice.setHeaderText("Choose where to get the HealthLens JSON data");
+        choice.setContentText("You can use the bundled sample JSON file or fetch JSON from a real API URL.");
+        choice.getButtonTypes().setAll(sampleButton, apiButton, cancelButton);
+
+        choice.showAndWait().ifPresent(selected -> {
+            if (selected == sampleButton) {
+                fetchBundledSampleJson();
+            } else if (selected == apiButton) {
+                fetchJsonFromApiUrl();
+            }
+        });
+    }
+
+    /** Loads the sample JSON bundled inside src/main/resources. */
+    private void fetchBundledSampleJson() {
+        jsonButton.setDisable(true);
+        jsonButton.setText("Loading JSON...");
+
+        recommendationExecutor.submit(() -> {
+            try {
+                String response = JsonHealthService.loadSampleApiResponse();
+                HealthData imported = JsonHealthService.parseApiResponse(response);
+
+                Platform.runLater(() -> {
+                    applyJsonHealthData(imported);
+                    jsonButton.setDisable(false);
+                    jsonButton.setText("JSON / API");
+                });
+            } catch (Exception e) {
+                Platform.runLater(() -> {
+                    jsonButton.setDisable(false);
+                    jsonButton.setText("JSON / API");
+                    showJsonError("Sample JSON error", e);
+                });
+            }
+        });
+    }
+
+    /** Opens the original API URL workflow for a real JSON endpoint. */
+    private void fetchJsonFromApiUrl() {
+        TextInputDialog input = new TextInputDialog();
+        input.setTitle("Health API");
+        input.setHeaderText("Fetch JSON from an API URL");
+        input.setContentText("API URL:");
+
+        input.showAndWait().ifPresent(url -> {
+            jsonButton.setDisable(true);
+            jsonButton.setText("Fetching JSON...");
+
+            recommendationExecutor.submit(() -> {
+                try {
+                    String response = JsonHealthService.fetchApiResponse(url);
+                    HealthData imported = JsonHealthService.parseApiResponse(response);
+
+                    Platform.runLater(() -> {
+                        applyJsonHealthData(imported);
+                        jsonButton.setDisable(false);
+                        jsonButton.setText("JSON / API");
+                    });
+                } catch (Exception e) {
+                    Platform.runLater(() -> {
+                        jsonButton.setDisable(false);
+                        jsonButton.setText("JSON / API");
+                        showJsonError("API / JSON error", e);
+                    });
+                }
+            });
+        });
+    }
+
+    /** Applies a JSON/API HealthData object to the existing dashboard. */
+    private void applyJsonHealthData(HealthData imported) {
+        healthData.setSleepHours(imported.getSleepHours());
+        healthData.setWaterGlasses(imported.getWaterGlasses());
+        healthData.setExerciseMinutes(imported.getExerciseMinutes());
+        healthData.setStressLevel(imported.getStressLevel());
+        if (imported.getMood() != null) {
+            healthData.setMood(imported.getMood());
+        }
+
+        sleepSlider.setValue(clamp(imported.getSleepHours(),
+                sleepSlider.getMin(), sleepSlider.getMax()));
+        waterSlider.setValue(clamp(imported.getWaterGlasses(),
+                waterSlider.getMin(), waterSlider.getMax()));
+        exerciseSlider.setValue(clamp(imported.getExerciseMinutes(),
+                exerciseSlider.getMin(), exerciseSlider.getMax()));
+        stressSlider.setValue(clamp(imported.getStressLevel(),
+                stressSlider.getMin(), stressSlider.getMax()));
+        moodChoiceBox.setValue(imported.getMood());
+
+        handleUpdate();
+    }
+
+    private void showJsonError(String title, Exception e) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle(title);
+        alert.setHeaderText(null);
+        alert.setContentText(e.getMessage() == null ? e.toString() : e.getMessage());
+        alert.showAndWait();
+    }
+
     @FXML
     private void handleReset() {
         healthData.resetEntriesToDefaults();
@@ -849,8 +1328,65 @@ public class HealthLensController {
         timeline.play();
     }
 
+    /** Creates the five visual segments used by the mobile-style battery indicator. */
+    private void setupBatteryIndicator() {
+        batterySegments.getChildren().clear();
+        batterySegmentNodes.clear();
+
+        for (int i = 0; i < 10; i++) {
+            Region segment = new Region();
+            segment.getStyleClass().add("battery-segment");
+            segment.setPrefSize(9, 30);
+            segment.setMinSize(9, 30);
+            segment.setMaxSize(9, 30);
+            batterySegmentNodes.add(segment);
+        }
+
+        // Add segments from left to right like a mobile battery indicator.
+        batterySegments.getChildren().addAll(batterySegmentNodes);
+        batteryPercentLabel.setTooltip(new Tooltip("Battery percentage is calculated from your overall health score."));
+    }
+
+    /** Updates the battery using the existing overall health score. */
+    private void updateBatteryIndicator(ScoreResult result) {
+        int percent = result.getOverallPercent();
+        int filledSegments = (int) Math.ceil(percent / 10.0);
+        String batteryTier = "battery-" + result.getTier();
+
+        batteryPercentLabel.setText(percent + "%");
+        ScaleTransition pulse = new ScaleTransition(Duration.millis(220), batteryPercentLabel);
+        pulse.setFromX(0.92);
+        pulse.setFromY(0.92);
+        pulse.setToX(1.0);
+        pulse.setToY(1.0);
+        pulse.play();
+        batteryPercentLabel.getStyleClass().removeAll("battery-good", "battery-medium", "battery-poor");
+        batteryPercentLabel.getStyleClass().add(batteryTier);
+
+        for (int i = 0; i < batterySegmentNodes.size(); i++) {
+            Region segment = batterySegmentNodes.get(i);
+            segment.getStyleClass().removeAll("battery-filled", "battery-empty", "battery-good", "battery-medium", "battery-poor");
+            boolean shouldFill = i < filledSegments;
+            if (shouldFill) {
+                segment.getStyleClass().addAll("battery-filled", batteryTier);
+            } else {
+                segment.getStyleClass().add("battery-empty");
+            }
+
+            // Smoothly animate each segment whenever the score changes.
+            segment.setOpacity(0.35);
+            Timeline fillAnimation = new Timeline(
+                    new KeyFrame(Duration.ZERO, new KeyValue(segment.opacityProperty(), 0.35)),
+                    new KeyFrame(Duration.millis(180 + (i * 70)),
+                            new KeyValue(segment.opacityProperty(), shouldFill ? 1.0 : 0.55, Interpolator.EASE_BOTH))
+            );
+            fillAnimation.play();
+        }
+    }
+
     /** Pure UI work: takes a ScoreResult from the Model and displays it. No scoring logic here. */
     private void renderSummary(ScoreResult result) {
+        updateBatteryIndicator(result);
         overallScoreLabel.setText("Overall Score: " + result.getOverallPercent() + "%");
 
         overallScoreLabel.getStyleClass().removeAll("score-good", "score-medium", "score-poor");

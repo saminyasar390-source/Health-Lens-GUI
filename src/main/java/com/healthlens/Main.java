@@ -1,5 +1,7 @@
 package com.healthlens;
 
+import com.healthlens.db.Database;
+
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -23,6 +25,9 @@ public class Main extends Application {
 
     @Override
     public void start(Stage stage) throws Exception {
+        // Make sure the local SQLite schema exists before any screen can use it.
+        Database.initializeDatabase();
+
         FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/healthlens/auth/Login.fxml"));
         Parent root = loader.load();
 

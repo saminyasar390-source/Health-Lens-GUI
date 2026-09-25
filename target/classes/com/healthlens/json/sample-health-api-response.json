@@ -1,0 +1,14 @@
+{
+  "status": "success",
+  "data": {
+    "sleepHours": 7.5,
+    "waterGlasses": 7,
+    "exerciseMinutes": 35,
+    "stressLevel": 4,
+    "mood": "Good",
+    "sleepGoalHours": 8,
+    "waterGoalGlasses": 8,
+    "exerciseGoalMinutes": 30,
+    "stressComfortMax": 4
+  }
+}

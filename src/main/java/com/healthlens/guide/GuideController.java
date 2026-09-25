@@ -1,6 +1,7 @@
 package com.healthlens.guide;
 
 import com.healthlens.HealthLensController;
+import com.healthlens.db.PersonDAO;
 import com.healthlens.model.Person;
 
 import javafx.application.Platform;
@@ -39,6 +40,7 @@ import javafx.stage.Stage;
 
 import java.io.File;
 import java.net.URL;
+import java.sql.SQLException;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
@@ -115,6 +117,7 @@ public class GuideController implements Initializable {
     private int currentPageIndex = 0;
     private String userName;
     private String userEmail;
+    private final PersonDAO personDAO = new PersonDAO();
 
     /** Called by LoginController/SignupController right after loading this FXML. */
     public void setSession(String userName, String userEmail) {
@@ -368,12 +371,23 @@ public class GuideController implements Initializable {
         tipColumn.setCellValueFactory(new PropertyValueFactory<>("healthTip"));
         scoreColumn.setCellValueFactory(new PropertyValueFactory<>("weeklyScore"));
 
-        ObservableList<Person> people = FXCollections.observableArrayList(
-                new Person("Amina", "Drinks 8 glasses of water daily", 92),
-                new Person("Rafi", "Walks 30 minutes every morning", 78),
-                new Person("Nadia", "Sleeps 8 hours on a fixed schedule", 88)
-        );
-        personTable.setItems(people);
+        try {
+            // Preserve the original three demo rows on a fresh database, but
+            // load the table from SQLite afterwards so the data is persistent.
+            personDAO.seedDemoDataIfNeeded();
+            List<Person> storedPeople = personDAO.getAllPeople();
+            ObservableList<Person> people = FXCollections.observableArrayList(storedPeople);
+            personTable.setItems(people);
+        } catch (SQLException e) {
+            personTable.setItems(FXCollections.observableArrayList());
+
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle("Database Error");
+            alert.setHeaderText("Could not load HealthLens people data");
+            alert.setContentText("SQLite could not be opened or the people table could not be read.\n\n"
+                    + e.getMessage());
+            alert.showAndWait();
+        }
     }
 
     // ===================== PAGE 8: SLIDER =====================

@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.TitledPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Priority?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+
+<!--
+    THE ACTIVITY CENTRE.
+
+    This window replaces the old four-tab "Concurrency Lab". Everything here
+    is something a user would actually want: what the app is doing in the
+    background, the reminders it has sent, when each data source last
+    reported, and a diagnostics panel they can ignore.
+
+    The concurrency concepts are still all present - they are just doing
+    real work now instead of being demonstrated. Tick "Show how it works"
+    to label each row with the mechanism behind it.
+-->
+<ScrollPane fx:id="root" fitToWidth="true" prefHeight="620.0" prefWidth="560.0"
+            styleClass="lab-window"
+            xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.healthlens.concurrency.ActivityCenterController">
+
+    <VBox spacing="14.0" styleClass="guide-page">
+        <padding>
+            <Insets bottom="18.0" left="18.0" right="18.0" top="18.0" />
+        </padding>
+
+        <!-- ============ HEADER ============ -->
+        <HBox alignment="CENTER_LEFT" spacing="10.0">
+            <Label styleClass="section-label" text="Activity Centre" />
+            <Region HBox.hgrow="ALWAYS" />
+            <CheckBox fx:id="howItWorksCheck" text="Show how it works" />
+        </HBox>
+        <Label fx:id="hintLabel" managed="false" styleClass="hint-label" visible="false" wrapText="true"
+               text="Each row now shows the thread behind it and its live state. Watch the notification centre sit in WAITING until a reminder arrives, the breathing session sit in TIMED_WAITING between phases, and sync workers flip to RUNNABLE while they fetch." />
+
+        <Separator />
+
+        <!-- ============ RUNNING RIGHT NOW ============ -->
+        <Label styleClass="control-label" text="Running right now" />
+        <VBox fx:id="activityRows" spacing="8.0" />
+
+        <Separator />
+
+        <!-- ============ REMINDERS ============ -->
+        <HBox alignment="CENTER_LEFT" spacing="10.0">
+            <Label styleClass="control-label" text="Reminders" />
+            <Region HBox.hgrow="ALWAYS" />
+            <CheckBox fx:id="remindersEnabledCheck" selected="true" text="On" />
+            <Button mnemonicParsing="false" onAction="#handleMarkAllRead" styleClass="reset-button" text="Mark all read" />
+        </HBox>
+        <Label fx:id="inboxStatusLabel" styleClass="hint-label" text="Inbox: 0 of 5 waiting" />
+        <ListView fx:id="notificationList" prefHeight="150.0" styleClass="chat-log" />
+
+        <Separator />
+
+        <!-- ============ DATA SOURCES ============ -->
+        <Label styleClass="control-label" text="Connected data sources" />
+        <VBox fx:id="sourceRows" spacing="6.0" />
+        <HBox spacing="10.0">
+            <Button fx:id="syncNowButton" mnemonicParsing="false" onAction="#handleSyncNow"
+                    styleClass="primary-button" text="Sync now" />
+            <Button fx:id="cancelSyncButton" disable="true" mnemonicParsing="false" onAction="#handleCancelSync"
+                    styleClass="reset-button" text="Cancel" />
+        </HBox>
+
+        <!-- ============ DIAGNOSTICS (collapsed by default) ============ -->
+        <TitledPane animated="false" expanded="false" text="Diagnostics">
+            <VBox spacing="10.0">
+                <padding>
+                    <Insets bottom="12.0" left="12.0" right="12.0" top="12.0" />
+                </padding>
+                <Label styleClass="hint-label" wrapText="true"
+                       text="Runs the same counting workload twice on this machine - once through an unprotected tally and once through a guarded one - to confirm your shared counters are safe. Only the guarded total should ever match." />
+                <Button fx:id="runDiagnosticsButton" mnemonicParsing="false" onAction="#handleRunDiagnostics"
+                        styleClass="reset-button" text="Run data-integrity self-test" />
+                <Label fx:id="diagnosticsResultLabel" styleClass="value-label" text="Not run yet." wrapText="true" />
+            </VBox>
+        </TitledPane>
+
+    </VBox>
+</ScrollPane>
