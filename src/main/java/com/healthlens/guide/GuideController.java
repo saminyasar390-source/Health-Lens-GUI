@@ -1,6 +1,8 @@
 package com.healthlens.guide;
 
 import com.healthlens.HealthLensController;
+import com.healthlens.db.Database;
+import com.healthlens.db.PersonDAO;
 import com.healthlens.model.Person;
 
 import javafx.application.Platform;
@@ -39,6 +41,7 @@ import javafx.stage.Stage;
 
 import java.io.File;
 import java.net.URL;
+import java.sql.SQLException;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
@@ -94,6 +97,12 @@ public class GuideController implements Initializable {
     @FXML private TableColumn<Person, String> nameColumn;
     @FXML private TableColumn<Person, String> tipColumn;
     @FXML private TableColumn<Person, Integer> scoreColumn;
+    @FXML private TextField personNameField;
+    @FXML private TextField personTipField;
+    @FXML private TextField personScoreField;
+    @FXML private Label personStatusLabel;
+
+    private final PersonDAO personDAO = new PersonDAO();
 
     // --- page 7 ---
     @FXML private TextArea goalTextArea;
@@ -361,19 +370,160 @@ public class GuideController implements Initializable {
         });
     }
 
-    // ===================== PAGE 6: TABLEVIEW + PERSON + OBSERVABLELIST =====================
+    // ===================== PAGE 6: TABLEVIEW + PERSON + SQLITE (JDBC) =====================
+    //
+    // This used to be three Person objects created straight in Java. It's
+    // now a real relational-database example: the table is created in
+    // healthlens.db on first run (Database.initializeDatabase()), the same
+    // three demo rows are seeded in once (PersonDAO.seedDemoDataIfNeeded()),
+    // and Add/Update/Delete below run actual SQL through PersonDAO.
 
     private void setupPersonTable() {
         nameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
         tipColumn.setCellValueFactory(new PropertyValueFactory<>("healthTip"));
         scoreColumn.setCellValueFactory(new PropertyValueFactory<>("weeklyScore"));
 
-        ObservableList<Person> people = FXCollections.observableArrayList(
-                new Person("Amina", "Drinks 8 glasses of water daily", 92),
-                new Person("Rafi", "Walks 30 minutes every morning", 78),
-                new Person("Nadia", "Sleeps 8 hours on a fixed schedule", 88)
-        );
-        personTable.setItems(people);
+        Database.initializeDatabase();
+        try {
+            personDAO.seedDemoDataIfNeeded();
+        } catch (SQLException e) {
+            showPersonStatus("Could not seed demo data: " + e.getMessage(), true);
+        }
+
+        refreshPersonTable();
+
+        // Selecting a row loads it into the form so it's ready to edit or delete.
+        personTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSel, newSel) -> {
+            if (newSel != null) {
+                personNameField.setText(newSel.getName());
+                personTipField.setText(newSel.getHealthTip());
+                personScoreField.setText(String.valueOf(newSel.getWeeklyScore()));
+            }
+        });
+    }
+
+    /** READ: reloads the table straight from SQLite. */
+    private void refreshPersonTable() {
+        try {
+            ObservableList<Person> people = FXCollections.observableArrayList(personDAO.getAllPeople());
+            personTable.setItems(people);
+        } catch (SQLException e) {
+            showPersonStatus("Could not load people from the database: " + e.getMessage(), true);
+        }
+    }
+
+    /** CREATE: reads the form, validates it, and inserts a new row. */
+    @FXML
+    private void handleAddPerson() {
+        String name = personNameField.getText() == null ? "" : personNameField.getText().trim();
+        String tip = personTipField.getText() == null ? "" : personTipField.getText().trim();
+        Integer score = parseScore(personScoreField.getText());
+
+        if (name.isEmpty()) {
+            showPersonStatus("Name is required.", true);
+            return;
+        }
+        if (score == null) {
+            showPersonStatus("Weekly score must be a whole number from 0 to 100.", true);
+            return;
+        }
+
+        try {
+            personDAO.insertPerson(new Person(name, tip, score));
+            refreshPersonTable();
+            handleClearPersonForm();
+            showPersonStatus("Added " + name + ".", false);
+        } catch (SQLException e) {
+            showPersonStatus("Could not add person: " + e.getMessage(), true);
+        }
+    }
+
+    /** UPDATE: applies the form's values to whichever row is selected in the table. */
+    @FXML
+    private void handleUpdatePerson() {
+        Person selected = personTable.getSelectionModel().getSelectedItem();
+        if (selected == null) {
+            showPersonStatus("Select a row in the table first.", true);
+            return;
+        }
+
+        String name = personNameField.getText() == null ? "" : personNameField.getText().trim();
+        String tip = personTipField.getText() == null ? "" : personTipField.getText().trim();
+        Integer score = parseScore(personScoreField.getText());
+
+        if (name.isEmpty()) {
+            showPersonStatus("Name is required.", true);
+            return;
+        }
+        if (score == null) {
+            showPersonStatus("Weekly score must be a whole number from 0 to 100.", true);
+            return;
+        }
+
+        try {
+            selected.setName(name);
+            selected.setHealthTip(tip);
+            selected.setWeeklyScore(score);
+            personDAO.updatePerson(selected);
+            refreshPersonTable();
+            showPersonStatus("Updated " + name + ".", false);
+        } catch (SQLException e) {
+            showPersonStatus("Could not update person: " + e.getMessage(), true);
+        }
+    }
+
+    /** DELETE: removes whichever row is selected, after confirmation. */
+    @FXML
+    private void handleDeletePerson() {
+        Person selected = personTable.getSelectionModel().getSelectedItem();
+        if (selected == null) {
+            showPersonStatus("Select a row in the table first.", true);
+            return;
+        }
+
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION,
+                "Delete " + selected.getName() + " from the database?");
+        confirm.setTitle("Confirm delete");
+        confirm.setHeaderText(null);
+        confirm.showAndWait().ifPresent(button -> {
+            if (button.getButtonData().isDefaultButton()) {
+                try {
+                    personDAO.deletePerson(selected.getId());
+                    refreshPersonTable();
+                    handleClearPersonForm();
+                    showPersonStatus("Deleted " + selected.getName() + ".", false);
+                } catch (SQLException e) {
+                    showPersonStatus("Could not delete person: " + e.getMessage(), true);
+                }
+            }
+        });
+    }
+
+    @FXML
+    private void handleClearPersonForm() {
+        personNameField.clear();
+        personTipField.clear();
+        personScoreField.clear();
+        personTable.getSelectionModel().clearSelection();
+        personStatusLabel.setVisible(false);
+        personStatusLabel.setManaged(false);
+    }
+
+    /** Returns the score as 0-100, or null if the text isn't a valid whole number in that range. */
+    private Integer parseScore(String text) {
+        try {
+            int value = Integer.parseInt(text == null ? "" : text.trim());
+            return (value >= 0 && value <= 100) ? value : null;
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private void showPersonStatus(String message, boolean isError) {
+        personStatusLabel.setText(message);
+        personStatusLabel.setStyle(isError ? "" : "-fx-text-fill: #0f766e;");
+        personStatusLabel.setVisible(true);
+        personStatusLabel.setManaged(true);
     }
 
     // ===================== PAGE 8: SLIDER =====================
