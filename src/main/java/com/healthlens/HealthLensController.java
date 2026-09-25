@@ -11,6 +11,7 @@ import com.healthlens.concurrency.SyncService;
 import com.healthlens.model.HealthData;
 import com.healthlens.model.ScoreCalculator;
 import com.healthlens.model.ScoreResult;
+import com.healthlens.json.JsonHealthService;
 
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
@@ -41,6 +42,8 @@ import javafx.scene.control.Slider;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.SpinnerValueFactory;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TextArea;
+import javafx.scene.control.TextInputDialog;
 import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -63,6 +66,7 @@ import javafx.util.Duration;
 
 import java.io.File;
 import java.io.InputStream;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -123,6 +127,7 @@ public class HealthLensController {
     @FXML private Button updateButton;
     @FXML private Button resetButton;
     @FXML private Button syncButton;
+    @FXML private Button jsonButton;
 
     // --- Outputs: progress bars + goal labels ---
     @FXML private ProgressBar sleepBar;
@@ -1108,6 +1113,144 @@ public class HealthLensController {
                     String.format(Locale.US, "%.0f%%", overallProgress * 100),
                     0, proteinTarget, 0, estimatedCalories, s.water, s.waterGoal);
         }
+    }
+
+    // ===================== JSON / API (WEEK 7) =====================
+
+    /**
+     * Demonstrates JSON serialization: Java HealthData object -> JSON text.
+     * The JSON is shown to the user so the structure can be inspected.
+     */
+    @FXML
+    private void handleOpenJson() {
+        try {
+            String json = JsonHealthService.toJson(healthData);
+
+            TextArea area = new TextArea(json);
+            area.setEditable(false);
+            area.setWrapText(false);
+            area.setPrefRowCount(18);
+            area.setPrefColumnCount(60);
+
+            Dialog<ButtonType> dialog = new Dialog<>();
+            dialog.setTitle("HealthLens - JSON Data");
+            dialog.setHeaderText("Current HealthData converted to JSON");
+            dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
+            dialog.getDialogPane().setContent(area);
+            dialog.showAndWait();
+        } catch (Exception e) {
+            showJsonError("Could not create JSON", e);
+        }
+    }
+
+    /**
+     * Demonstrates JSON deserialization: JSON text -> Java HealthData object.
+     * It also shows that parsed values can flow through the existing
+     * View -> Model -> View pipeline without rewriting the dashboard.
+     */
+    @FXML
+    private void handleImportJson() {
+        TextInputDialog input = new TextInputDialog();
+        input.setTitle("Import Health JSON");
+        input.setHeaderText("Paste a HealthLens JSON object");
+        input.setContentText("JSON:");
+
+        input.showAndWait().ifPresent(json -> {
+            try {
+                HealthData imported = JsonHealthService.fromJson(json);
+
+                healthData.setSleepHours(imported.getSleepHours());
+                healthData.setWaterGlasses(imported.getWaterGlasses());
+                healthData.setExerciseMinutes(imported.getExerciseMinutes());
+                healthData.setStressLevel(imported.getStressLevel());
+                if (imported.getMood() != null) {
+                    healthData.setMood(imported.getMood());
+                }
+
+                sleepSlider.setValue(clamp(healthData.getSleepHours(),
+                        sleepSlider.getMin(), sleepSlider.getMax()));
+                waterSlider.setValue(clamp(healthData.getWaterGlasses(),
+                        waterSlider.getMin(), waterSlider.getMax()));
+                exerciseSlider.setValue(clamp(healthData.getExerciseMinutes(),
+                        exerciseSlider.getMin(), exerciseSlider.getMax()));
+                stressSlider.setValue(clamp(healthData.getStressLevel(),
+                        stressSlider.getMin(), stressSlider.getMax()));
+                moodChoiceBox.setValue(healthData.getMood());
+
+                handleUpdate();
+            } catch (Exception e) {
+                showJsonError("Invalid JSON", e);
+            }
+        });
+    }
+
+    /**
+     * Demonstrates API URL response handling.
+     *
+     * The HTTP request and JSON parsing happen on a background thread.
+     * Platform.runLater() is used only for updating JavaFX controls.
+     */
+    @FXML
+    private void handleFetchJsonApi() {
+        TextInputDialog input = new TextInputDialog();
+        input.setTitle("Health API");
+        input.setHeaderText("Fetch JSON from an API URL");
+        input.setContentText("API URL:");
+
+        input.showAndWait().ifPresent(url -> {
+            jsonButton.setDisable(true);
+            jsonButton.setText("Fetching JSON...");
+
+            recommendationExecutor.submit(() -> {
+                try {
+                    String response = JsonHealthService.fetchApiResponse(url);
+                    HealthData imported = JsonHealthService.parseApiResponse(response);
+
+                    Platform.runLater(() -> {
+                        applyJsonHealthData(imported);
+                        jsonButton.setDisable(false);
+                        jsonButton.setText("JSON / API");
+                    });
+                } catch (Exception e) {
+                    Platform.runLater(() -> {
+                        jsonButton.setDisable(false);
+                        jsonButton.setText("JSON / API");
+                        showJsonError("API / JSON error", e);
+                    });
+                }
+            });
+        });
+    }
+
+    /** Applies a JSON/API HealthData object to the existing dashboard. */
+    private void applyJsonHealthData(HealthData imported) {
+        healthData.setSleepHours(imported.getSleepHours());
+        healthData.setWaterGlasses(imported.getWaterGlasses());
+        healthData.setExerciseMinutes(imported.getExerciseMinutes());
+        healthData.setStressLevel(imported.getStressLevel());
+        if (imported.getMood() != null) {
+            healthData.setMood(imported.getMood());
+        }
+
+        sleepSlider.setValue(clamp(imported.getSleepHours(),
+                sleepSlider.getMin(), sleepSlider.getMax()));
+        waterSlider.setValue(clamp(imported.getWaterGlasses(),
+                waterSlider.getMin(), waterSlider.getMax()));
+        exerciseSlider.setValue(clamp(imported.getExerciseMinutes(),
+                exerciseSlider.getMin(), exerciseSlider.getMax()));
+        stressSlider.setValue(clamp(imported.getStressLevel(),
+                stressSlider.getMin(), stressSlider.getMax()));
+        moodChoiceBox.setValue(imported.getMood());
+
+        handleUpdate();
+    }
+
+    private void showJsonError(String title, Exception e) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle(title);
+        alert.setHeaderText(null);
+        alert.setContentText(e.getMessage() == null ? e.toString() : e.getMessage());
+        alert.showAndWait();
     }
 
     @FXML
