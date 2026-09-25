@@ -1192,6 +1192,52 @@ public class HealthLensController {
      */
     @FXML
     private void handleFetchJsonApi() {
+        ButtonType sampleButton = new ButtonType("Use Sample JSON");
+        ButtonType apiButton = new ButtonType("Fetch API URL");
+        ButtonType cancelButton = ButtonType.CANCEL;
+
+        Alert choice = new Alert(Alert.AlertType.CONFIRMATION);
+        choice.setTitle("Health API / JSON");
+        choice.setHeaderText("Choose where to get the HealthLens JSON data");
+        choice.setContentText("You can use the bundled sample JSON file or fetch JSON from a real API URL.");
+        choice.getButtonTypes().setAll(sampleButton, apiButton, cancelButton);
+
+        choice.showAndWait().ifPresent(selected -> {
+            if (selected == sampleButton) {
+                fetchBundledSampleJson();
+            } else if (selected == apiButton) {
+                fetchJsonFromApiUrl();
+            }
+        });
+    }
+
+    /** Loads the sample JSON bundled inside src/main/resources. */
+    private void fetchBundledSampleJson() {
+        jsonButton.setDisable(true);
+        jsonButton.setText("Loading JSON...");
+
+        recommendationExecutor.submit(() -> {
+            try {
+                String response = JsonHealthService.loadSampleApiResponse();
+                HealthData imported = JsonHealthService.parseApiResponse(response);
+
+                Platform.runLater(() -> {
+                    applyJsonHealthData(imported);
+                    jsonButton.setDisable(false);
+                    jsonButton.setText("JSON / API");
+                });
+            } catch (Exception e) {
+                Platform.runLater(() -> {
+                    jsonButton.setDisable(false);
+                    jsonButton.setText("JSON / API");
+                    showJsonError("Sample JSON error", e);
+                });
+            }
+        });
+    }
+
+    /** Opens the original API URL workflow for a real JSON endpoint. */
+    private void fetchJsonFromApiUrl() {
         TextInputDialog input = new TextInputDialog();
         input.setTitle("Health API");
         input.setHeaderText("Fetch JSON from an API URL");

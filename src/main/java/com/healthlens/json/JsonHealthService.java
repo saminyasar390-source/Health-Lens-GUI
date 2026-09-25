@@ -11,6 +11,8 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.io.InputStream;
 
 /**
  * Handles JSON serialization, parsing, and API response processing.
@@ -71,6 +73,21 @@ public final class JsonHealthService {
         }
 
         return GSON.fromJson(data, HealthData.class);
+    }
+
+    /**
+     * Loads the bundled sample API response from the application resources.
+     * This lets the JSON feature be demonstrated without an internet connection.
+     */
+    public static String loadSampleApiResponse() throws Exception {
+        String resource = "/com/healthlens/json/sample-health-api-response.json";
+
+        try (InputStream input = JsonHealthService.class.getResourceAsStream(resource)) {
+            if (input == null) {
+                throw new IllegalStateException("Bundled sample JSON file was not found: " + resource);
+            }
+            return new String(input.readAllBytes(), StandardCharsets.UTF_8);
+        }
     }
 
     /**
