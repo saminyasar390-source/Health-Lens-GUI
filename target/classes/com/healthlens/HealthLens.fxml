@@ -76,10 +76,10 @@
                                 <Tooltip text="Tell the assistant about your day and it fills in the dashboard" />
                             </tooltip>
                         </Button>
-                        <Button fx:id="concurrencyLabButton" mnemonicParsing="false" onAction="#handleOpenConcurrencyLab"
-                                styleClass="icon-button" text="📡">
+                        <Button fx:id="activityCenterButton" mnemonicParsing="false" onAction="#handleOpenActivityCenter"
+                                styleClass="icon-button" text="🔔">
                             <tooltip>
-                                <Tooltip text="Activity Monitor — see device syncing and notifications running in the background" />
+                                <Tooltip text="Activity Centre — your reminders, your data sources, and what HealthLens is doing in the background" />
                             </tooltip>
                         </Button>
                     </HBox>
@@ -183,7 +183,7 @@
                     <Button fx:id="syncButton" mnemonicParsing="false" onAction="#handleSyncWithDevice"
                             styleClass="reset-button" text="🔄 Sync All Sources">
                         <tooltip>
-                            <Tooltip text="Fetches from smartwatch, pedometer, and water log in parallel (ExecutorService + Callable + Future)" />
+                            <Tooltip text="Fetches every connected source at the same time instead of one after another" />
                         </tooltip>
                     </Button>
 

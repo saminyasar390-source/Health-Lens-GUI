@@ -23,7 +23,9 @@
 <?import javafx.scene.control.TreeView?>
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.ColumnConstraints?>
 <?import javafx.scene.layout.FlowPane?>
+<?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.StackPane?>
@@ -140,16 +142,38 @@
                 <Label fx:id="treeSelectionLabel" styleClass="value-label" />
             </VBox>
 
-            <!-- PAGE 6: TableView + Person + ObservableList -->
+            <!-- PAGE 6: TableView + Person + ObservableList, now backed by SQLite -->
             <VBox fx:id="page6" managed="false" spacing="10.0" styleClass="guide-page" visible="false">
                 <Label styleClass="section-label" text="Sample users and their weekly scores" />
-                <TableView fx:id="personTable" prefHeight="200.0">
+                <Label styleClass="control-label" text="Stored in a local SQLite database (healthlens.db) — select a row to edit or delete it." wrapText="true" />
+                <TableView fx:id="personTable" prefHeight="180.0">
                     <columns>
                         <TableColumn fx:id="nameColumn" prefWidth="140.0" text="Name" />
                         <TableColumn fx:id="tipColumn" prefWidth="260.0" text="Favorite Habit" />
-                        <TableColumn fx:id="scoreColumn" prefWidth="120.0" text="Weekly Score" />
+                        <TableColumn fx:id="scoreColumn" prefWidth="110.0" text="Weekly Score" />
                     </columns>
                 </TableView>
+
+                <GridPane hgap="10.0" vgap="8.0">
+                    <columnConstraints>
+                        <ColumnConstraints minWidth="90.0" />
+                        <ColumnConstraints hgrow="ALWAYS" minWidth="150.0" />
+                    </columnConstraints>
+                    <Label styleClass="control-label" text="Name" GridPane.rowIndex="0" GridPane.columnIndex="0" />
+                    <TextField fx:id="personNameField" promptText="e.g. Tanvir" GridPane.rowIndex="0" GridPane.columnIndex="1" />
+                    <Label styleClass="control-label" text="Favorite habit" GridPane.rowIndex="1" GridPane.columnIndex="0" />
+                    <TextField fx:id="personTipField" promptText="e.g. Stretches every evening" GridPane.rowIndex="1" GridPane.columnIndex="1" />
+                    <Label styleClass="control-label" text="Weekly score" GridPane.rowIndex="2" GridPane.columnIndex="0" />
+                    <TextField fx:id="personScoreField" promptText="0-100" GridPane.rowIndex="2" GridPane.columnIndex="1" />
+                </GridPane>
+
+                <HBox spacing="10.0">
+                    <Button onAction="#handleAddPerson" styleClass="primary-button" text="Add" />
+                    <Button onAction="#handleUpdatePerson" styleClass="reset-button" text="Update Selected" />
+                    <Button onAction="#handleDeletePerson" styleClass="reset-button" text="Delete Selected" />
+                    <Button onAction="#handleClearPersonForm" styleClass="reset-button" text="Clear" />
+                </HBox>
+                <Label fx:id="personStatusLabel" styleClass="error-label" managed="false" visible="false" wrapText="true" />
             </VBox>
 
             <!-- PAGE 7: TextArea -->
