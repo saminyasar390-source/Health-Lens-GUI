@@ -188,6 +188,27 @@
                         </tooltip>
                     </Button>
 
+                    <Button fx:id="jsonButton" mnemonicParsing="false" onAction="#handleFetchJsonApi"
+                            styleClass="reset-button" text="🌐 JSON API">
+                        <tooltip>
+                            <Tooltip text="View JSON, import JSON, or fetch a JSON API response" />
+                        </tooltip>
+                    </Button>
+
+                    <Button mnemonicParsing="false" onAction="#handleOpenJson"
+                            styleClass="reset-button" text="{} View JSON">
+                        <tooltip>
+                            <Tooltip text="Serialize the current HealthData object into JSON" />
+                        </tooltip>
+                    </Button>
+
+                    <Button mnemonicParsing="false" onAction="#handleImportJson"
+                            styleClass="reset-button" text="↧ Import JSON">
+                        <tooltip>
+                            <Tooltip text="Parse JSON text back into the HealthData model" />
+                        </tooltip>
+                    </Button>
+
                     <Button fx:id="recommendationsButton" mnemonicParsing="false" onAction="#handleOpenRecommendations"
                             styleClass="recommendations-button" text="🧠 Personalized Health Recommendations" wrapText="true">
                         <tooltip>
