@@ -209,7 +209,7 @@
                         </tooltip>
                     </Button>
 
-                    <Button fx:id="recommendationsButton mnemonicParsing="false" onAction="#handleOpenRecommendations"
+                    <Button fx:id="recommendationsButton" mnemonicParsing="false" onAction="#handleOpenRecommendations"
                             styleClass="recommendations-button" text="🧠 Personalized Health Recommendations" wrapText="true">
                         <tooltip>
                             <Tooltip text="View personalized suggestions based on your current health inputs" />
