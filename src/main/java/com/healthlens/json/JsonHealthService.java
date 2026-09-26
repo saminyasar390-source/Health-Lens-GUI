@@ -83,6 +83,44 @@ public final class JsonHealthService {
         return new OnlineApiDemoResult(ONLINE_DEMO_URL, json, id, title, category, price);
     }
 
+
+    /**
+     * Inspects an API response before deciding whether it can be imported as
+     * HealthData. Generic APIs such as DummyJSON are still accepted and shown
+     * as JSON rather than causing Jackson to throw an unknown-field exception.
+     */
+    public static ApiResponseResult inspectApiResponse(String url, String json) throws Exception {
+        if (json == null || json.isBlank()) {
+            throw new IllegalArgumentException("API response is empty.");
+        }
+
+        JsonNode root = OBJECT_MAPPER.readTree(json);
+        JsonNode data = root.has("data") && root.get("data").isObject()
+                ? root.get("data") : root;
+
+        boolean isHealthData = data.isObject() &&
+                (data.has("sleepHours") || data.has("waterGlasses") ||
+                 data.has("exerciseMinutes") || data.has("stressLevel"));
+
+        HealthData healthData = isHealthData
+                ? OBJECT_MAPPER.treeToValue(data, HealthData.class)
+                : null;
+
+        StringBuilder summary = new StringBuilder();
+        if (data.isObject()) {
+            data.fields().forEachRemaining(entry -> {
+                if (summary.length() > 0) summary.append("\n");
+                JsonNode value = entry.getValue();
+                String display = value.isValueNode() ? value.asText() : value.toString();
+                summary.append(entry.getKey()).append(" = ").append(display);
+            });
+        } else {
+            summary.append("JSON root type = ").append(root.getNodeType());
+        }
+
+        return new ApiResponseResult(url, json, isHealthData, healthData, summary.toString());
+    }
+
     public static String loadSampleApiResponse() throws Exception {
         String resource = "/com/healthlens/json/sample-health-api-response.json";
         try (InputStream input = JsonHealthService.class.getResourceAsStream(resource)) {
@@ -92,4 +130,12 @@ public final class JsonHealthService {
     }
 
     public record OnlineApiDemoResult(String url, String rawJson, String id, String title, String category, double price) { }
+
+    public record ApiResponseResult(
+            String url,
+            String rawJson,
+            boolean isHealthData,
+            HealthData healthData,
+            String summary
+    ) { }
 }

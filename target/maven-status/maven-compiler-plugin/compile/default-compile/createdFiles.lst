@@ -6,6 +6,7 @@ com\healthlens\concurrency\BreathingSession$Listener.class
 com\healthlens\concurrency\ActivityCenterController$1.class
 com\healthlens\HealthLensController$RecommendationEngine.class
 com\healthlens\concurrency\Notification.class
+com\healthlens\json\JsonHealthService$ApiResponseResult.class
 com\healthlens\concurrency\SyncService.class
 com\healthlens\json\JsonHealthService.class
 com\healthlens\auth\LoginController.class

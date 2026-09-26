@@ -1338,11 +1338,16 @@ public class HealthLensController {
         });
     }
 
-    /** Opens the original API URL workflow for a real JSON endpoint. */
+    /**
+     * Fetches a real JSON API URL. If the response matches the HealthLens
+     * HealthData schema, it is imported into the dashboard. Otherwise the
+     * response is displayed as generic JSON instead of being forced into
+     * HealthData (which would cause an "Unrecognized field" error).
+     */
     private void fetchJsonFromApiUrl() {
-        TextInputDialog input = new TextInputDialog();
-        input.setTitle("Health API");
-        input.setHeaderText("Fetch JSON from an API URL");
+        TextInputDialog input = new TextInputDialog(JsonHealthService.ONLINE_DEMO_URL);
+        input.setTitle("Health API / JSON");
+        input.setHeaderText("Fetch JSON from a real API URL");
         input.setContentText("API URL:");
 
         input.showAndWait().ifPresent(url -> {
@@ -1352,10 +1357,15 @@ public class HealthLensController {
             recommendationExecutor.submit(() -> {
                 try {
                     String response = JsonHealthService.fetchApiResponse(url);
-                    HealthData imported = JsonHealthService.parseApiResponse(response);
+                    JsonHealthService.ApiResponseResult result =
+                            JsonHealthService.inspectApiResponse(url, response);
 
                     Platform.runLater(() -> {
-                        applyJsonHealthData(imported);
+                        if (result.isHealthData()) {
+                            applyJsonHealthData(result.healthData());
+                        } else {
+                            showGenericApiResponse(result);
+                        }
                         jsonButton.setDisable(false);
                         jsonButton.setText("JSON / API");
                     });
@@ -1368,6 +1378,28 @@ public class HealthLensController {
                 }
             });
         });
+    }
+
+    /** Shows a valid JSON response that does not use the HealthLens schema. */
+    private void showGenericApiResponse(JsonHealthService.ApiResponseResult result) {
+        TextArea area = new TextArea();
+        area.setEditable(false);
+        area.setWrapText(true);
+        area.setText("LIVE HTTP GET SUCCESS\n\n" +
+                "Endpoint: " + result.url() + "\n\n" +
+                "This API returned valid JSON, but its fields are not the HealthLens HealthData schema.\n" +
+                "The response was therefore parsed safely with Jackson JsonNode instead of being forced into HealthData.\n\n" +
+                "Detected fields:\n" + result.summary() + "\n\n" +
+                "Raw JSON response:\n" + result.rawJson());
+        area.setPrefRowCount(20);
+        area.setPrefColumnCount(70);
+
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.setTitle("Live JSON API Response");
+        dialog.setHeaderText("HTTP GET → JSON → Jackson JsonNode");
+        dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
+        dialog.getDialogPane().setContent(area);
+        dialog.showAndWait();
     }
 
     /** Applies a JSON/API HealthData object to the existing dashboard. */
