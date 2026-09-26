@@ -200,6 +200,13 @@
                         </tooltip>
                     </Button>
 
+                    <Button mnemonicParsing="false" onAction="#handleOnlineApiDemo"
+                            styleClass="reset-button" text="🌐 Live Online API Test">
+                        <tooltip>
+                            <Tooltip text="Live HTTP GET to a public JSON API, then parse the response with Jackson" />
+                        </tooltip>
+                    </Button>
+
                     <Button mnemonicParsing="false" onAction="#handleOpenJson"
                             styleClass="reset-button" text="{} View JSON">
                         <tooltip>

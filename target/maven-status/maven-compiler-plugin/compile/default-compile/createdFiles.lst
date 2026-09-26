@@ -1,3 +1,4 @@
+com\healthlens\model\StressMetric.class
 com\healthlens\concurrency\NotificationCenterService$Listener.class
 com\healthlens\HealthLensController$1.class
 com\healthlens\concurrency\SyncService$Listener.class
@@ -10,9 +11,13 @@ com\healthlens\json\JsonHealthService.class
 com\healthlens\auth\LoginController.class
 com\healthlens\concurrency\ActivityCenterController.class
 com\healthlens\concurrency\MergedReading.class
+com\healthlens\model\HealthRecord.class
+com\healthlens\model\SleepMetric.class
 com\healthlens\model\Person.class
 com\healthlens\HealthLensController$2.class
 com\healthlens\concurrency\BackgroundServices.class
+com\healthlens\db\HealthRecordDAO.class
+com\healthlens\model\HealthMetric.class
 com\healthlens\auth\PasswordUtil.class
 com\healthlens\concurrency\ActivityInfo$1.class
 com\healthlens\concurrency\NotificationCenterService.class
@@ -23,6 +28,9 @@ com\healthlens\concurrency\IntegrityCheck$GuardedTally.class
 com\healthlens\concurrency\SourceReading$Status.class
 com\healthlens\HealthLensController$RecommendationCardData.class
 com\healthlens\guide\GuideController.class
+com\healthlens\model\ExerciseMetric.class
+com\healthlens\model\WaterMetric.class
+com\healthlens\json\JsonHealthService$OnlineApiDemoResult.class
 com\healthlens\concurrency\UnsafeCounter.class
 com\healthlens\auth\SignupController.class
 com\healthlens\concurrency\IntegrityCheck$Result.class

@@ -1187,6 +1187,43 @@ public class HealthLensController {
      * The JSON is shown to the user so the structure can be inspected.
      */
     @FXML
+    private void handleOnlineApiDemo() {
+        jsonButton.setDisable(true);
+        jsonButton.setText("Testing API...");
+        recommendationExecutor.submit(() -> {
+            try {
+                JsonHealthService.OnlineApiDemoResult result = JsonHealthService.runOnlineApiDemo();
+                Platform.runLater(() -> {
+                    TextArea area = new TextArea();
+                    area.setEditable(false);
+                    area.setWrapText(true);
+                    area.setText("LIVE HTTP GET SUCCESS\n\n" +
+                            "Endpoint: " + result.url() + "\n\n" +
+                            "Jackson-parsed fields:\n" +
+                            "id = " + result.id() + "\n" +
+                            "title = " + result.title() + "\n" +
+                            "category = " + result.category() + "\n" +
+                            "price = " + result.price() + "\n\n" +
+                            "Raw JSON response:\n" + result.rawJson());
+                    area.setPrefRowCount(20); area.setPrefColumnCount(70);
+                    Dialog<ButtonType> dialog = new Dialog<>();
+                    dialog.setTitle("Live Online JSON API Demonstration");
+                    dialog.setHeaderText("HTTP GET → JSON response → Jackson JsonNode parsing");
+                    dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
+                    dialog.getDialogPane().setContent(area);
+                    dialog.showAndWait();
+                    jsonButton.setDisable(false); jsonButton.setText("🌐 JSON API");
+                });
+            } catch (Exception e) {
+                Platform.runLater(() -> {
+                    jsonButton.setDisable(false); jsonButton.setText("🌐 JSON API");
+                    showJsonError("Online API test failed", e);
+                });
+            }
+        });
+    }
+
+    @FXML
     private void handleOpenJson() {
         try {
             String json = JsonHealthService.toJson(healthData);

@@ -3,6 +3,8 @@ package com.healthlens.guide;
 import com.healthlens.HealthLensController;
 import com.healthlens.db.PersonDAO;
 import com.healthlens.model.Person;
+import com.healthlens.model.HealthRecord;
+import com.healthlens.db.HealthRecordDAO;
 
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
@@ -93,9 +95,21 @@ public class GuideController implements Initializable {
 
     // --- page 6 ---
     @FXML private TableView<Person> personTable;
+    @FXML private TableColumn<Person, Integer> idColumn;
     @FXML private TableColumn<Person, String> nameColumn;
     @FXML private TableColumn<Person, String> tipColumn;
     @FXML private TableColumn<Person, Integer> scoreColumn;
+    @FXML private TextField personNameField;
+    @FXML private TextField personTipField;
+    @FXML private TextField personScoreField;
+    @FXML private TableView<HealthRecord> healthRecordTable;
+    @FXML private TableColumn<HealthRecord, Integer> recordIdColumn;
+    @FXML private TableColumn<HealthRecord, Integer> recordPersonIdColumn;
+    @FXML private TableColumn<HealthRecord, String> recordDateColumn;
+    @FXML private TableColumn<HealthRecord, Double> recordSleepColumn;
+    @FXML private TableColumn<HealthRecord, Double> recordWaterColumn;
+    @FXML private TableColumn<HealthRecord, Double> recordExerciseColumn;
+    @FXML private TableColumn<HealthRecord, Double> recordStressColumn;
 
     // --- page 7 ---
     @FXML private TextArea goalTextArea;
@@ -118,6 +132,7 @@ public class GuideController implements Initializable {
     private String userName;
     private String userEmail;
     private final PersonDAO personDAO = new PersonDAO();
+    private final HealthRecordDAO healthRecordDAO = new HealthRecordDAO();
 
     /** Called by LoginController/SignupController right after loading this FXML. */
     public void setSession(String userName, String userEmail) {
@@ -367,27 +382,97 @@ public class GuideController implements Initializable {
     // ===================== PAGE 6: TABLEVIEW + PERSON + OBSERVABLELIST =====================
 
     private void setupPersonTable() {
+        idColumn.setCellValueFactory(new PropertyValueFactory<>("id"));
         nameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
         tipColumn.setCellValueFactory(new PropertyValueFactory<>("healthTip"));
         scoreColumn.setCellValueFactory(new PropertyValueFactory<>("weeklyScore"));
-
+        recordIdColumn.setCellValueFactory(new PropertyValueFactory<>("id"));
+        recordPersonIdColumn.setCellValueFactory(new PropertyValueFactory<>("personId"));
+        recordDateColumn.setCellValueFactory(new PropertyValueFactory<>("recordDate"));
+        recordSleepColumn.setCellValueFactory(new PropertyValueFactory<>("sleepHours"));
+        recordWaterColumn.setCellValueFactory(new PropertyValueFactory<>("waterGlasses"));
+        recordExerciseColumn.setCellValueFactory(new PropertyValueFactory<>("exerciseMinutes"));
+        recordStressColumn.setCellValueFactory(new PropertyValueFactory<>("stressLevel"));
+        personTable.getSelectionModel().selectedItemProperty().addListener((obs, oldV, selected) -> {
+            if (selected != null) {
+                personNameField.setText(selected.getName());
+                personTipField.setText(selected.getHealthTip());
+                personScoreField.setText(String.valueOf(selected.getWeeklyScore()));
+            }
+        });
         try {
-            // Preserve the original three demo rows on a fresh database, but
-            // load the table from SQLite afterwards so the data is persistent.
             personDAO.seedDemoDataIfNeeded();
-            List<Person> storedPeople = personDAO.getAllPeople();
-            ObservableList<Person> people = FXCollections.observableArrayList(storedPeople);
-            personTable.setItems(people);
+            healthRecordDAO.seedDemoDataIfNeeded();
+            refreshPeopleTable();
+            refreshHealthRecordTable();
         } catch (SQLException e) {
             personTable.setItems(FXCollections.observableArrayList());
-
-            Alert alert = new Alert(Alert.AlertType.ERROR);
-            alert.setTitle("Database Error");
-            alert.setHeaderText("Could not load HealthLens people data");
-            alert.setContentText("SQLite could not be opened or the people table could not be read.\n\n"
-                    + e.getMessage());
-            alert.showAndWait();
+            showDbError(e);
         }
+    }
+
+    private void refreshPeopleTable() throws SQLException {
+        personTable.setItems(FXCollections.observableArrayList(personDAO.getAllPeople()));
+    }
+
+    private void refreshHealthRecordTable() throws SQLException {
+        healthRecordTable.setItems(FXCollections.observableArrayList(healthRecordDAO.getAll()));
+    }
+
+    @FXML private void handleCreatePerson() {
+        try {
+            Person person = readPersonForm(0);
+            personDAO.insertPerson(person);
+            refreshPeopleTable();
+            clearPersonForm();
+            showInfo("CREATE completed", "A new person was inserted into SQLite.");
+        } catch (Exception e) { showDbError(e); }
+    }
+
+    @FXML private void handleUpdatePerson() {
+        Person selected = personTable.getSelectionModel().getSelectedItem();
+        if (selected == null) { showInfo("Select a person", "Select a row before updating it."); return; }
+        try {
+            Person updated = readPersonForm(selected.getId());
+            personDAO.updatePerson(updated);
+            refreshPeopleTable();
+            showInfo("UPDATE completed", "The selected SQLite row was updated.");
+        } catch (Exception e) { showDbError(e); }
+    }
+
+    @FXML private void handleDeletePerson() {
+        Person selected = personTable.getSelectionModel().getSelectedItem();
+        if (selected == null) { showInfo("Select a person", "Select a row before deleting it."); return; }
+        try {
+            personDAO.deletePerson(selected.getId());
+            refreshPeopleTable();
+            refreshHealthRecordTable();
+            clearPersonForm();
+            showInfo("DELETE completed", "The person was deleted. Related health_records are removed by the foreign key cascade.");
+        } catch (Exception e) { showDbError(e); }
+    }
+
+    @FXML private void handleRefreshPeople() {
+        try { refreshPeopleTable(); refreshHealthRecordTable(); } catch (SQLException e) { showDbError(e); }
+    }
+
+    private Person readPersonForm(int id) {
+        String name = personNameField.getText() == null ? "" : personNameField.getText().trim();
+        String tip = personTipField.getText() == null ? "" : personTipField.getText().trim();
+        if (name.isBlank()) throw new IllegalArgumentException("Name is required.");
+        int score = Integer.parseInt(personScoreField.getText().trim());
+        if (score < 0 || score > 100) throw new IllegalArgumentException("Weekly score must be between 0 and 100.");
+        return new Person(id, name, tip, score);
+    }
+
+    private void clearPersonForm() { personNameField.clear(); personTipField.clear(); personScoreField.clear(); personTable.getSelectionModel().clearSelection(); }
+
+    private void showDbError(Exception e) {
+        Alert a = new Alert(Alert.AlertType.ERROR); a.setTitle("Database Error"); a.setHeaderText("SQLite operation failed"); a.setContentText(e.getMessage()); a.showAndWait();
+    }
+
+    private void showInfo(String title, String message) {
+        Alert a = new Alert(Alert.AlertType.INFORMATION); a.setTitle(title); a.setHeaderText(null); a.setContentText(message); a.showAndWait();
     }
 
     // ===================== PAGE 8: SLIDER =====================
