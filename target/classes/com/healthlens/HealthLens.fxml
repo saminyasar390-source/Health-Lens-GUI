@@ -9,6 +9,7 @@
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ProgressBar?>
 <?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.Slider?>
 <?import javafx.scene.control.Tooltip?>
 <?import javafx.scene.image.ImageView?>
@@ -16,6 +17,7 @@
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.Region?>
 <?import javafx.scene.shape.Circle?>
 
 <!--
@@ -35,11 +37,15 @@
     <!-- Optional dark scrim so text stays readable no matter what image is used -->
     <StackPane fx:id="scrimPane" styleClass="scrim-pane" />
 
-    <!-- ===================== LAYER 2: MAIN UI CARD ===================== -->
-    <BorderPane fx:id="overlayPane" styleClass="overlay-pane">
+    <!-- ===================== LAYER 2: SCROLLABLE MAIN UI ===================== -->
+    <ScrollPane fx:id="mainScrollPane" fitToWidth="true" fitToHeight="false"
+                hbarPolicy="NEVER" vbarPolicy="AS_NEEDED" pannable="true"
+                styleClass="main-scroll-pane">
         <StackPane.margin>
             <Insets bottom="28.0" left="28.0" right="28.0" top="28.0" />
         </StackPane.margin>
+        <content>
+            <BorderPane fx:id="overlayPane" styleClass="overlay-pane">
 
         <!-- ===================== TOP: TITLE + THEME/SETTINGS BUTTONS ===================== -->
         <top>
@@ -59,7 +65,7 @@
                             <ImageView fx:id="profileImageView" fitHeight="34.0" fitWidth="34.0" visible="false" />
                         </StackPane>
                         <Button fx:id="themeToggleButton" mnemonicParsing="false" onAction="#handleToggleTheme"
-                                styleClass="icon-button" text="🌙">
+                                styleClass="icon-button" text="◐">
                             <tooltip>
                                 <Tooltip text="Switch between light and dark theme" />
                             </tooltip>
@@ -71,15 +77,15 @@
                             </tooltip>
                         </Button>
                         <Button fx:id="chatButton" mnemonicParsing="false" onAction="#handleOpenChat"
-                                styleClass="icon-button" text="💬">
+                                styleClass="icon-button" text="✉">
                             <tooltip>
                                 <Tooltip text="Tell the assistant about your day and it fills in the dashboard" />
                             </tooltip>
                         </Button>
-                        <Button fx:id="concurrencyLabButton" mnemonicParsing="false" onAction="#handleOpenConcurrencyLab"
-                                styleClass="icon-button" text="📡">
+                        <Button fx:id="activityCenterButton" mnemonicParsing="false" onAction="#handleOpenActivityCenter"
+                                styleClass="icon-button">
                             <tooltip>
-                                <Tooltip text="Activity Monitor — see device syncing and notifications running in the background" />
+                                <Tooltip text="Activity Centre — your reminders, your data sources, and what HealthLens is doing in the background" />
                             </tooltip>
                         </Button>
                     </HBox>
@@ -183,7 +189,42 @@
                     <Button fx:id="syncButton" mnemonicParsing="false" onAction="#handleSyncWithDevice"
                             styleClass="reset-button" text="🔄 Sync All Sources">
                         <tooltip>
-                            <Tooltip text="Fetches from smartwatch, pedometer, and water log in parallel (ExecutorService + Callable + Future)" />
+                            <Tooltip text="Fetches every connected source at the same time instead of one after another" />
+                        </tooltip>
+                    </Button>
+
+                    <Button fx:id="jsonButton" mnemonicParsing="false" onAction="#handleFetchJsonApi"
+                            styleClass="reset-button" text="🌐 JSON API">
+                        <tooltip>
+                            <Tooltip text="View JSON, import JSON, or fetch a JSON API response" />
+                        </tooltip>
+                    </Button>
+
+                    <Button mnemonicParsing="false" onAction="#handleOnlineApiDemo"
+                            styleClass="reset-button" text="🌐 Live Online API Test">
+                        <tooltip>
+                            <Tooltip text="Live HTTP GET to a public JSON API, then parse the response with Jackson" />
+                        </tooltip>
+                    </Button>
+
+                    <Button mnemonicParsing="false" onAction="#handleOpenJson"
+                            styleClass="reset-button" text="{} View JSON">
+                        <tooltip>
+                            <Tooltip text="Serialize the current HealthData object into JSON" />
+                        </tooltip>
+                    </Button>
+
+                    <Button mnemonicParsing="false" onAction="#handleImportJson"
+                            styleClass="reset-button" text="↧ Import JSON">
+                        <tooltip>
+                            <Tooltip text="Parse JSON text back into the HealthData model" />
+                        </tooltip>
+                    </Button>
+
+                    <Button fx:id="recommendationsButton" mnemonicParsing="false" onAction="#handleOpenRecommendations"
+                            styleClass="recommendations-button" text="🧠 Personalized Health Recommendations" wrapText="true">
+                        <tooltip>
+                            <Tooltip text="View personalized suggestions based on your current health inputs" />
                         </tooltip>
                     </Button>
 
@@ -229,8 +270,18 @@
                     </BarChart>
 
                     <!-- Summary -->
-                    <VBox styleClass="summary-box" spacing="4.0">
-                        <Label fx:id="overallScoreLabel" styleClass="overall-score-label" text="Overall Score: --" />
+                    <VBox styleClass="summary-box" spacing="8.0">
+                        <Label styleClass="overall-score-heading" text="Daily Health Battery" />
+                        <HBox alignment="CENTER_LEFT" spacing="12.0">
+                            <StackPane styleClass="battery-shell">
+                                <Region styleClass="battery-terminal" />
+                                <HBox fx:id="batterySegments" alignment="CENTER_LEFT" spacing="3.0" styleClass="battery-segments" />
+                            </StackPane>
+                            <VBox spacing="2.0" alignment="CENTER_LEFT">
+                                <Label fx:id="batteryPercentLabel" styleClass="battery-percent-label" text="--%" />
+                                <Label fx:id="overallScoreLabel" styleClass="overall-score-label" text="Overall Score: --" />
+                            </VBox>
+                        </HBox>
                         <Label fx:id="summaryLabel" styleClass="summary-text" text="Fill in your habits and click &quot;Update Dashboard&quot; to see your summary."
                                wrapText="true" />
                     </VBox>
@@ -244,5 +295,7 @@
             <Label styleClass="footer-label" text="HealthLens • Track sleep, water, exercise, mood &amp; stress" BorderPane.alignment="CENTER" />
         </bottom>
 
-    </BorderPane>
+            </BorderPane>
+        </content>
+    </ScrollPane>
 </StackPane>

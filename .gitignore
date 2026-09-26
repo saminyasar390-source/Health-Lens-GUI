@@ -1,1 +1,3 @@
 target/ .idea/ *.iml *.log
+# Local SQLite database
+healthlens.db

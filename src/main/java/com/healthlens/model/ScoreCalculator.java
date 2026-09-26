@@ -13,26 +13,40 @@ public final class ScoreCalculator {
 
     /** Scores a HealthData snapshot and builds the human-readable summary text. */
     public static ScoreResult calculate(HealthData data) {
-        double sleepScore = clamp01(data.getSleepHours() / data.getSleepGoalHours());
-        double waterScore = clamp01(data.getWaterGlasses() / data.getWaterGoalGlasses());
-        double exerciseScore = clamp01(data.getExerciseMinutes() / data.getExerciseGoalMinutes());
-        // Stress is inverted: a high stress level should produce a LOW score.
-        double stressScore = clamp01(1.0 - ((data.getStressLevel() - 1.0) / 9.0));
-
-        double overall = (sleepScore + waterScore + exerciseScore + stressScore) / 4.0;
+        // Polymorphism: all concrete metrics are treated through the abstract HealthMetric type.
+        HealthMetric[] metrics = { new SleepMetric(), new WaterMetric(), new ExerciseMetric(), new StressMetric() };
+        double sleepScore = metrics[0].calculateScore(data);
+        double waterScore = metrics[1].calculateScore(data);
+        double exerciseScore = metrics[2].calculateScore(data);
+        double stressScore = metrics[3].calculateScore(data);
+        double overall = (sleepScore + waterScore + exerciseScore + stressScore) / metrics.length;
 
         String tier;
-        if (overall >= 0.8) {
-            tier = "good";
-        } else if (overall >= 0.5) {
-            tier = "medium";
-        } else {
-            tier = "poor";
+        if (overall >= 0.8) tier = "good";
+        else if (overall >= 0.5) tier = "medium";
+        else tier = "poor";
+
+        // ScoreRule is a user-defined functional interface (one abstract method).
+        // Anonymous class implementation: an explicit method body, no target-type inference.
+        ScoreRule strictRule = new ScoreRule() {
+            @Override
+            public boolean isHealthy(double normalizedScore) {
+                return normalizedScore >= 0.7;
+            }
+        };
+        // Lambda implementation of the exact same interface: concise, compiler infers the type.
+        ScoreRule lenientRule = normalizedScore -> normalizedScore >= 0.4;
+
+        int metricsNeedingAttention = 0;
+        for (double metricScore : new double[] { sleepScore, waterScore, exerciseScore, stressScore }) {
+            if (!lenientRule.isHealthy(metricScore)) {
+                metricsNeedingAttention++;
+            }
         }
+        boolean meetsStrictBar = strictRule.isHealthy(overall);
 
-        String summary = buildSummaryText(data);
-
-        return new ScoreResult(sleepScore, waterScore, exerciseScore, stressScore, overall, tier, summary);
+        return new ScoreResult(sleepScore, waterScore, exerciseScore, stressScore, overall, tier,
+                buildSummaryText(data), metricsNeedingAttention, meetsStrictBar);
     }
 
     private static String buildSummaryText(HealthData data) {

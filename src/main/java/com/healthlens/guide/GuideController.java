@@ -1,7 +1,12 @@
 package com.healthlens.guide;
 
 import com.healthlens.HealthLensController;
+import com.healthlens.db.PersonDAO;
 import com.healthlens.model.Person;
+import com.healthlens.model.HealthRecord;
+import com.healthlens.model.InvalidHealthDataException;
+import com.healthlens.db.HealthRecordDAO;
+import com.healthlens.json.JsonHealthService;
 
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
@@ -14,10 +19,12 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ColorPicker;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.DatePicker;
+import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.ProgressBar;
@@ -39,6 +46,7 @@ import javafx.stage.Stage;
 
 import java.io.File;
 import java.net.URL;
+import java.sql.SQLException;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
@@ -91,9 +99,27 @@ public class GuideController implements Initializable {
 
     // --- page 6 ---
     @FXML private TableView<Person> personTable;
+    @FXML private TableColumn<Person, Integer> idColumn;
     @FXML private TableColumn<Person, String> nameColumn;
     @FXML private TableColumn<Person, String> tipColumn;
     @FXML private TableColumn<Person, Integer> scoreColumn;
+    @FXML private TextField personNameField;
+    @FXML private TextField personTipField;
+    @FXML private TextField personScoreField;
+    @FXML private TableView<HealthRecord> healthRecordTable;
+    @FXML private TableColumn<HealthRecord, Integer> recordIdColumn;
+    @FXML private TableColumn<HealthRecord, Integer> recordPersonIdColumn;
+    @FXML private TableColumn<HealthRecord, String> recordDateColumn;
+    @FXML private TableColumn<HealthRecord, Double> recordSleepColumn;
+    @FXML private TableColumn<HealthRecord, Double> recordWaterColumn;
+    @FXML private TableColumn<HealthRecord, Double> recordExerciseColumn;
+    @FXML private TableColumn<HealthRecord, Double> recordStressColumn;
+    @FXML private TextField recordDateField;
+    @FXML private TextField recordSleepField;
+    @FXML private TextField recordWaterField;
+    @FXML private TextField recordExerciseField;
+    @FXML private TextField recordStressField;
+    @FXML private Label selectedPersonLabel;
 
     // --- page 7 ---
     @FXML private TextArea goalTextArea;
@@ -115,6 +141,8 @@ public class GuideController implements Initializable {
     private int currentPageIndex = 0;
     private String userName;
     private String userEmail;
+    private final PersonDAO personDAO = new PersonDAO();
+    private final HealthRecordDAO healthRecordDAO = new HealthRecordDAO();
 
     /** Called by LoginController/SignupController right after loading this FXML. */
     public void setSession(String userName, String userEmail) {
@@ -364,16 +392,250 @@ public class GuideController implements Initializable {
     // ===================== PAGE 6: TABLEVIEW + PERSON + OBSERVABLELIST =====================
 
     private void setupPersonTable() {
+        idColumn.setCellValueFactory(new PropertyValueFactory<>("id"));
         nameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
         tipColumn.setCellValueFactory(new PropertyValueFactory<>("healthTip"));
         scoreColumn.setCellValueFactory(new PropertyValueFactory<>("weeklyScore"));
+        recordIdColumn.setCellValueFactory(new PropertyValueFactory<>("id"));
+        recordPersonIdColumn.setCellValueFactory(new PropertyValueFactory<>("personId"));
+        recordDateColumn.setCellValueFactory(new PropertyValueFactory<>("recordDate"));
+        recordSleepColumn.setCellValueFactory(new PropertyValueFactory<>("sleepHours"));
+        recordWaterColumn.setCellValueFactory(new PropertyValueFactory<>("waterGlasses"));
+        recordExerciseColumn.setCellValueFactory(new PropertyValueFactory<>("exerciseMinutes"));
+        recordStressColumn.setCellValueFactory(new PropertyValueFactory<>("stressLevel"));
+        personTable.getSelectionModel().selectedItemProperty().addListener((obs, oldV, selected) -> {
+            if (selected != null) {
+                personNameField.setText(selected.getName());
+                personTipField.setText(selected.getHealthTip());
+                personScoreField.setText(String.valueOf(selected.getWeeklyScore()));
+                selectedPersonLabel.setText("Health records for: " + selected.getName() + " (Person ID " + selected.getId() + ")");
+                try { refreshHealthRecordTable(); } catch (SQLException e) { showDbError(e); }
+            }
+        });
+        healthRecordTable.getSelectionModel().selectedItemProperty().addListener((obs, oldV, selected) -> {
+            if (selected != null) fillHealthRecordForm(selected);
+        });
+        try {
+            personDAO.seedDemoDataIfNeeded();
+            healthRecordDAO.seedDemoDataIfNeeded();
+            refreshPeopleTable();
+            refreshHealthRecordTable();
+        } catch (SQLException e) {
+            personTable.setItems(FXCollections.observableArrayList());
+            showDbError(e);
+        }
+    }
 
-        ObservableList<Person> people = FXCollections.observableArrayList(
-                new Person("Amina", "Drinks 8 glasses of water daily", 92),
-                new Person("Rafi", "Walks 30 minutes every morning", 78),
-                new Person("Nadia", "Sleeps 8 hours on a fixed schedule", 88)
-        );
-        personTable.setItems(people);
+    private void refreshPeopleTable() throws SQLException {
+        personTable.setItems(FXCollections.observableArrayList(personDAO.getAllPeople()));
+    }
+
+    private void refreshHealthRecordTable() throws SQLException {
+        Person selected = personTable.getSelectionModel().getSelectedItem();
+        if (selected == null) {
+            healthRecordTable.setItems(FXCollections.observableArrayList());
+            selectedPersonLabel.setText("Select a person to view their health records.");
+            return;
+        }
+        healthRecordTable.setItems(FXCollections.observableArrayList(healthRecordDAO.getForPerson(selected.getId())));
+    }
+
+    @FXML private void handleCreatePerson() {
+        try {
+            Person person = readPersonForm(0);
+            personDAO.insertPerson(person);
+            refreshPeopleTable();
+            clearPersonForm();
+            showInfo("CREATE completed", "A new person was inserted into SQLite.");
+        } catch (Exception e) { showDbError(e); }
+    }
+
+    @FXML private void handleUpdatePerson() {
+        Person selected = personTable.getSelectionModel().getSelectedItem();
+        if (selected == null) { showInfo("Select a person", "Select a row before updating it."); return; }
+        try {
+            Person updated = readPersonForm(selected.getId());
+            personDAO.updatePerson(updated);
+            refreshPeopleTable();
+            showInfo("UPDATE completed", "The selected SQLite row was updated.");
+        } catch (Exception e) { showDbError(e); }
+    }
+
+    @FXML private void handleDeletePerson() {
+        Person selected = personTable.getSelectionModel().getSelectedItem();
+        if (selected == null) { showInfo("Select a person", "Select a row before deleting it."); return; }
+        try {
+            personDAO.deletePerson(selected.getId());
+            refreshPeopleTable();
+            refreshHealthRecordTable();
+            clearPersonForm();
+            showInfo("DELETE completed", "The person was deleted. Related health_records are removed by the foreign key cascade.");
+        } catch (Exception e) { showDbError(e); }
+    }
+
+
+    @FXML private void handleCreateHealthRecord() {
+        Person selected = personTable.getSelectionModel().getSelectedItem();
+        if (selected == null) { showInfo("Select a person", "Select a person first so the new record can be linked through person_id."); return; }
+        try {
+            HealthRecord record = readHealthRecordForm(0, selected.getId());
+            healthRecordDAO.insert(record);
+            refreshHealthRecordTable();
+            clearHealthRecordForm();
+            showInfo("CREATE completed", "Health record added for " + selected.getName() + ".");
+        } catch (Exception e) { showDbError(e); }
+    }
+
+    @FXML private void handleUpdateHealthRecord() {
+        Person selectedPerson = personTable.getSelectionModel().getSelectedItem();
+        HealthRecord selected = healthRecordTable.getSelectionModel().getSelectedItem();
+        if (selectedPerson == null || selected == null) { showInfo("Select a record", "Select a person and one of their health records first."); return; }
+        try {
+            HealthRecord updated = readHealthRecordForm(selected.getId(), selectedPerson.getId());
+            healthRecordDAO.update(updated);
+            refreshHealthRecordTable();
+            showInfo("UPDATE completed", "The selected health record was updated in SQLite.");
+        } catch (Exception e) { showDbError(e); }
+    }
+
+    @FXML private void handleDeleteHealthRecord() {
+        HealthRecord selected = healthRecordTable.getSelectionModel().getSelectedItem();
+        if (selected == null) { showInfo("Select a record", "Select a health record before deleting it."); return; }
+        try {
+            healthRecordDAO.delete(selected.getId());
+            refreshHealthRecordTable();
+            clearHealthRecordForm();
+            showInfo("DELETE completed", "The selected health record was deleted.");
+        } catch (Exception e) { showDbError(e); }
+    }
+
+    /**
+     * JSON array export: serializes the selected person's whole health-record
+     * list into one JSON array with Jackson (List&lt;HealthRecord&gt; -> JSON),
+     * the write-side counterpart of the students.json array example.
+     */
+    @FXML
+    private void handleExportHealthRecordsJson() {
+        Person selected = personTable.getSelectionModel().getSelectedItem();
+        if (selected == null) {
+            showInfo("Select a person", "Select a person first so their records can be exported.");
+            return;
+        }
+        try {
+            List<HealthRecord> records = healthRecordDAO.getForPerson(selected.getId());
+            String json = JsonHealthService.toJsonArray(records);
+
+            TextArea area = new TextArea(json);
+            area.setEditable(false);
+            area.setWrapText(false);
+            area.setPrefRowCount(16);
+            area.setPrefColumnCount(60);
+
+            Dialog<ButtonType> dialog = new Dialog<>();
+            dialog.setTitle("Health Records - JSON Array");
+            dialog.setHeaderText("All health records for " + selected.getName() + ", as one JSON array");
+            dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
+            dialog.getDialogPane().setContent(area);
+            dialog.showAndWait();
+        } catch (Exception e) {
+            showDbError(e);
+        }
+    }
+
+    /**
+     * JSON array import: parses a pasted JSON array back into
+     * List&lt;HealthRecord&gt; with Jackson's TypeReference, then inserts
+     * each row for the currently selected person (their own id overrides
+     * whatever person_id was in the pasted JSON, the same way the tutorial's
+     * "read the list, add a record, write it back" exercise stays scoped to
+     * one owner).
+     */
+    @FXML
+    private void handleImportHealthRecordsJson() {
+        Person selected = personTable.getSelectionModel().getSelectedItem();
+        if (selected == null) {
+            showInfo("Select a person", "Select a person first so imported records have somewhere to go.");
+            return;
+        }
+
+        TextArea input = new TextArea();
+        input.setPromptText("Paste a JSON array of health records here, e.g. [ {\"recordDate\":\"2026-09-01\", ...}, ... ]");
+        input.setPrefRowCount(12);
+        input.setPrefColumnCount(60);
+
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.setTitle("Import Health Records - JSON Array");
+        dialog.setHeaderText("Paste a JSON array to insert as new records for " + selected.getName());
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+        dialog.getDialogPane().setContent(input);
+
+        dialog.showAndWait().filter(button -> button == ButtonType.OK).ifPresent(button -> {
+            try {
+                List<HealthRecord> parsed = JsonHealthService.parseHealthRecordArray(input.getText());
+                for (HealthRecord record : parsed) {
+                    record.setId(0);
+                    record.setPersonId(selected.getId());
+                    healthRecordDAO.insert(record);
+                }
+                refreshHealthRecordTable();
+                showInfo("Import completed", parsed.size() + " health record(s) inserted from the JSON array.");
+            } catch (Exception e) {
+                showDbError(e);
+            }
+        });
+    }
+
+    private HealthRecord readHealthRecordForm(int id, int personId) throws InvalidHealthDataException {
+        String date = recordDateField.getText() == null ? "" : recordDateField.getText().trim();
+        if (date.isBlank()) throw new InvalidHealthDataException("Date is required (YYYY-MM-DD).");
+        // Double.parseDouble stays unchecked: a genuine typo like "abc" throws
+        // NumberFormatException on its own, which showDbError() already catches.
+        double sleep = Double.parseDouble(recordSleepField.getText().trim());
+        double water = Double.parseDouble(recordWaterField.getText().trim());
+        double exercise = Double.parseDouble(recordExerciseField.getText().trim());
+        double stress = Double.parseDouble(recordStressField.getText().trim());
+        if (sleep < 0 || water < 0 || exercise < 0 || stress < 0) {
+            throw new InvalidHealthDataException("Health values cannot be negative.");
+        }
+        return new HealthRecord(id, personId, date, sleep, water, exercise, stress);
+    }
+
+    private void fillHealthRecordForm(HealthRecord r) {
+        recordDateField.setText(r.getRecordDate());
+        recordSleepField.setText(String.valueOf(r.getSleepHours()));
+        recordWaterField.setText(String.valueOf(r.getWaterGlasses()));
+        recordExerciseField.setText(String.valueOf(r.getExerciseMinutes()));
+        recordStressField.setText(String.valueOf(r.getStressLevel()));
+    }
+
+    private void clearHealthRecordForm() {
+        recordDateField.clear(); recordSleepField.clear(); recordWaterField.clear(); recordExerciseField.clear(); recordStressField.clear();
+        healthRecordTable.getSelectionModel().clearSelection();
+    }
+
+    @FXML private void handleRefreshPeople() {
+        try { refreshPeopleTable(); refreshHealthRecordTable(); } catch (SQLException e) { showDbError(e); }
+    }
+
+    private Person readPersonForm(int id) throws InvalidHealthDataException {
+        String name = personNameField.getText() == null ? "" : personNameField.getText().trim();
+        String tip = personTipField.getText() == null ? "" : personTipField.getText().trim();
+        if (name.isBlank()) throw new InvalidHealthDataException("Name is required.");
+        // Integer.parseInt stays unchecked: non-numeric text throws NumberFormatException
+        // on its own, which is caught alongside InvalidHealthDataException below.
+        int score = Integer.parseInt(personScoreField.getText().trim());
+        if (score < 0 || score > 100) throw new InvalidHealthDataException("Weekly score must be between 0 and 100.");
+        return new Person(id, name, tip, score);
+    }
+
+    private void clearPersonForm() { personNameField.clear(); personTipField.clear(); personScoreField.clear(); personTable.getSelectionModel().clearSelection(); clearHealthRecordForm(); }
+
+    private void showDbError(Exception e) {
+        Alert a = new Alert(Alert.AlertType.ERROR); a.setTitle("Database Error"); a.setHeaderText("SQLite operation failed"); a.setContentText(e.getMessage()); a.showAndWait();
+    }
+
+    private void showInfo(String title, String message) {
+        Alert a = new Alert(Alert.AlertType.INFORMATION); a.setTitle(title); a.setHeaderText(null); a.setContentText(message); a.showAndWait();
     }
 
     // ===================== PAGE 8: SLIDER =====================

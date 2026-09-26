@@ -169,3 +169,59 @@ things like:
 
 ...and I can point you to (or directly edit) the exact section that needs
 to change.
+
+
+## Week 7 - JSON Parsing and API Response Handling
+
+HealthLens now includes a dedicated `com.healthlens.json.JsonHealthService`.
+
+### JSON concepts demonstrated
+
+1. **Serialization**: `HealthData` -> JSON using Gson.
+2. **Deserialization**: JSON -> `HealthData` using Gson.
+3. **Structured API response parsing**: supports both a direct JSON object and an API response containing a `data` object.
+4. **HTTP API handling**: Java 17 `HttpClient` sends a GET request and checks the HTTP status code before parsing the response.
+5. **JavaFX thread safety**: API work runs on the background executor; `Platform.runLater()` updates the GUI.
+
+### Sample API response
+
+See:
+`src/main/resources/com/healthlens/json/sample-health-api-response.json`
+
+Expected shape:
+
+```json
+{
+  "status": "success",
+  "data": {
+    "sleepHours": 7.5,
+    "waterGlasses": 7,
+    "exerciseMinutes": 35,
+    "stressLevel": 4,
+    "mood": "Good",
+    "sleepGoalHours": 8,
+    "waterGoalGlasses": 8,
+    "exerciseGoalMinutes": 30,
+    "stressComfortMax": 4
+  }
+}
+```
+
+### GUI
+
+- **🌐 JSON API** asks for an API URL, downloads the JSON in the background, parses it, and applies the values to the dashboard.
+- **{} View JSON** converts the current Java model to formatted JSON.
+- **↧ Import JSON** converts pasted JSON back into the Java model.
+
+The existing `HealthLensController -> HealthData -> ScoreCalculator -> View` flow remains unchanged. JSON is an additional data input/output layer.
+
+
+## Live JSON API demonstration
+
+The project uses this verified public JSON endpoint for the live Jackson demonstration:
+
+https://dummyjson.com/products/1
+
+The response contains the fields used by `OnlineApiDemoResult`: `id`, `title`, `category`, and `price`. `JsonHealthService.runOnlineApiDemo()` performs the HTTP GET and parses those fields with Jackson `JsonNode`.
+
+This endpoint is deliberately used for the **networking + JSON parsing demonstration**. It is not deserialized into `HealthData`, because its schema is a product object rather than a HealthLens health record. The HealthLens-specific `HealthData` JSON is handled by the bundled sample JSON/import flow.

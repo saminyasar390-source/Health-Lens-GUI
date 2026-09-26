@@ -140,14 +140,64 @@
                 <Label fx:id="treeSelectionLabel" styleClass="value-label" />
             </VBox>
 
-            <!-- PAGE 6: TableView + Person + ObservableList -->
-            <VBox fx:id="page6" managed="false" spacing="10.0" styleClass="guide-page" visible="false">
-                <Label styleClass="section-label" text="Sample users and their weekly scores" />
-                <TableView fx:id="personTable" prefHeight="200.0">
+            <!-- PAGE 6: SQLite + complete GUI CRUD + related table -->
+            <VBox fx:id="page6" spacing="10.0" styleClass="guide-page">
+                <Label styleClass="section-label" text="SQLite database — related-table CRUD demonstration" />
+                <Label styleClass="hint-label" wrapText="true" text="One person can have many health records. Select a person first; the second table then shows only that person's records via health_records.person_id → people.id." />
+                <HBox spacing="8.0">
+                    <TextField fx:id="personNameField" promptText="Name" />
+                    <TextField fx:id="personTipField" promptText="Health tip" prefWidth="260.0" />
+                    <TextField fx:id="personScoreField" promptText="Score 0-100" prefWidth="110.0" />
+                </HBox>
+                <HBox spacing="8.0">
+                    <Button onAction="#handleCreatePerson" styleClass="primary-button" text="CREATE PERSON" />
+                    <Button onAction="#handleUpdatePerson" styleClass="reset-button" text="UPDATE PERSON" />
+                    <Button onAction="#handleDeletePerson" styleClass="reset-button" text="DELETE PERSON" />
+                    <Button onAction="#handleRefreshPeople" styleClass="reset-button" text="Refresh" />
+                </HBox>
+                <TableView fx:id="personTable" prefHeight="155.0">
                     <columns>
-                        <TableColumn fx:id="nameColumn" prefWidth="140.0" text="Name" />
+                        <TableColumn fx:id="idColumn" prefWidth="55.0" text="ID" />
+                        <TableColumn fx:id="nameColumn" prefWidth="130.0" text="Name" />
                         <TableColumn fx:id="tipColumn" prefWidth="260.0" text="Favorite Habit" />
-                        <TableColumn fx:id="scoreColumn" prefWidth="120.0" text="Weekly Score" />
+                        <TableColumn fx:id="scoreColumn" prefWidth="110.0" text="Weekly Score" />
+                    </columns>
+                </TableView>
+
+                <Label fx:id="selectedPersonLabel" styleClass="section-label" text="Select a person to view their health records." />
+                <HBox spacing="6.0">
+                    <TextField fx:id="recordDateField" promptText="Date YYYY-MM-DD" />
+                    <TextField fx:id="recordSleepField" promptText="Sleep hours" />
+                    <TextField fx:id="recordWaterField" promptText="Water glasses" />
+                    <TextField fx:id="recordExerciseField" promptText="Exercise minutes" />
+                    <TextField fx:id="recordStressField" promptText="Stress level" />
+                </HBox>
+                <HBox spacing="8.0">
+                    <Button onAction="#handleCreateHealthRecord" styleClass="primary-button" text="ADD RECORD" />
+                    <Button onAction="#handleUpdateHealthRecord" styleClass="reset-button" text="UPDATE RECORD" />
+                    <Button onAction="#handleDeleteHealthRecord" styleClass="reset-button" text="DELETE RECORD" />
+                </HBox>
+                <HBox spacing="8.0">
+                    <Button onAction="#handleExportHealthRecordsJson" styleClass="reset-button" text="{} Export Records (JSON array)">
+                        <tooltip>
+                            <Tooltip text="Serializes this person's health records into one JSON array with Jackson" />
+                        </tooltip>
+                    </Button>
+                    <Button onAction="#handleImportHealthRecordsJson" styleClass="reset-button" text="↧ Import Records (JSON array)">
+                        <tooltip>
+                            <Tooltip text="Parses a pasted JSON array back into a List&lt;HealthRecord&gt; and inserts each row" />
+                        </tooltip>
+                    </Button>
+                </HBox>
+                <TableView fx:id="healthRecordTable" prefHeight="155.0">
+                    <columns>
+                        <TableColumn fx:id="recordIdColumn" prefWidth="45.0" text="ID" />
+                        <TableColumn fx:id="recordPersonIdColumn" prefWidth="70.0" text="Person ID" />
+                        <TableColumn fx:id="recordDateColumn" prefWidth="95.0" text="Date" />
+                        <TableColumn fx:id="recordSleepColumn" prefWidth="65.0" text="Sleep" />
+                        <TableColumn fx:id="recordWaterColumn" prefWidth="65.0" text="Water" />
+                        <TableColumn fx:id="recordExerciseColumn" prefWidth="85.0" text="Exercise" />
+                        <TableColumn fx:id="recordStressColumn" prefWidth="65.0" text="Stress" />
                     </columns>
                 </TableView>
             </VBox>
