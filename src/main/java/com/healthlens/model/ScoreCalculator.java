@@ -26,7 +26,27 @@ public final class ScoreCalculator {
         else if (overall >= 0.5) tier = "medium";
         else tier = "poor";
 
-        return new ScoreResult(sleepScore, waterScore, exerciseScore, stressScore, overall, tier, buildSummaryText(data));
+        // ScoreRule is a user-defined functional interface (one abstract method).
+        // Anonymous class implementation: an explicit method body, no target-type inference.
+        ScoreRule strictRule = new ScoreRule() {
+            @Override
+            public boolean isHealthy(double normalizedScore) {
+                return normalizedScore >= 0.7;
+            }
+        };
+        // Lambda implementation of the exact same interface: concise, compiler infers the type.
+        ScoreRule lenientRule = normalizedScore -> normalizedScore >= 0.4;
+
+        int metricsNeedingAttention = 0;
+        for (double metricScore : new double[] { sleepScore, waterScore, exerciseScore, stressScore }) {
+            if (!lenientRule.isHealthy(metricScore)) {
+                metricsNeedingAttention++;
+            }
+        }
+        boolean meetsStrictBar = strictRule.isHealthy(overall);
+
+        return new ScoreResult(sleepScore, waterScore, exerciseScore, stressScore, overall, tier,
+                buildSummaryText(data), metricsNeedingAttention, meetsStrictBar);
     }
 
     private static String buildSummaryText(HealthData data) {

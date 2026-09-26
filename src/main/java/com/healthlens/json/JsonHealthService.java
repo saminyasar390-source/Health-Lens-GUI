@@ -1,9 +1,11 @@
 package com.healthlens.json;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.healthlens.model.HealthData;
+import com.healthlens.model.HealthRecord;
 
 import java.io.InputStream;
 import java.net.URI;
@@ -11,6 +13,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 /**
  * JSON + HTTP service used by the HealthLens dashboard.
@@ -127,6 +130,30 @@ public final class JsonHealthService {
             if (input == null) throw new IllegalStateException("Bundled sample JSON file was not found: " + resource);
             return new String(input.readAllBytes(), StandardCharsets.UTF_8);
         }
+    }
+
+    /**
+     * Serializes a whole list of health records into one JSON array, e.g.
+     * [ {"id":1,...}, {"id":2,...} ] — the write-side counterpart of
+     * parseHealthRecordArray(), matching the JSON tutorial's students.json
+     * "list of objects" section rather than just a single object.
+     */
+    public static String toJsonArray(List<HealthRecord> records) throws Exception {
+        return OBJECT_MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(records);
+    }
+
+    /**
+     * Parses a JSON array of health records into a List&lt;HealthRecord&gt;.
+     * Jackson cannot infer a generic List's element type from a plain
+     * .class token, so a TypeReference is used instead — the same pattern
+     * as the JSON tutorial's `new TypeReference&lt;List&lt;Student&gt;&gt;() {}`
+     * when reading students.json.
+     */
+    public static List<HealthRecord> parseHealthRecordArray(String json) throws Exception {
+        if (json == null || json.isBlank()) {
+            throw new IllegalArgumentException("JSON array is empty.");
+        }
+        return OBJECT_MAPPER.readValue(json, new TypeReference<List<HealthRecord>>() { });
     }
 
     public record OnlineApiDemoResult(String url, String rawJson, String id, String title, String category, double price) { }

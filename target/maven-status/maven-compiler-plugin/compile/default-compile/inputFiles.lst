@@ -31,9 +31,11 @@ D:\HealthLens\src\main\java\com\healthlens\model\ExerciseMetric.java
 D:\HealthLens\src\main\java\com\healthlens\model\HealthData.java
 D:\HealthLens\src\main\java\com\healthlens\model\HealthMetric.java
 D:\HealthLens\src\main\java\com\healthlens\model\HealthRecord.java
+D:\HealthLens\src\main\java\com\healthlens\model\InvalidHealthDataException.java
 D:\HealthLens\src\main\java\com\healthlens\model\Person.java
 D:\HealthLens\src\main\java\com\healthlens\model\ScoreCalculator.java
 D:\HealthLens\src\main\java\com\healthlens\model\ScoreResult.java
+D:\HealthLens\src\main\java\com\healthlens\model\ScoreRule.java
 D:\HealthLens\src\main\java\com\healthlens\model\SleepMetric.java
 D:\HealthLens\src\main\java\com\healthlens\model\StressMetric.java
 D:\HealthLens\src\main\java\com\healthlens\model\WaterMetric.java

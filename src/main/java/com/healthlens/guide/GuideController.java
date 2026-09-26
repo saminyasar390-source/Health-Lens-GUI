@@ -4,7 +4,9 @@ import com.healthlens.HealthLensController;
 import com.healthlens.db.PersonDAO;
 import com.healthlens.model.Person;
 import com.healthlens.model.HealthRecord;
+import com.healthlens.model.InvalidHealthDataException;
 import com.healthlens.db.HealthRecordDAO;
+import com.healthlens.json.JsonHealthService;
 
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
@@ -17,10 +19,12 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ColorPicker;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.DatePicker;
+import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.ProgressBar;
@@ -505,14 +509,94 @@ public class GuideController implements Initializable {
         } catch (Exception e) { showDbError(e); }
     }
 
-    private HealthRecord readHealthRecordForm(int id, int personId) {
+    /**
+     * JSON array export: serializes the selected person's whole health-record
+     * list into one JSON array with Jackson (List&lt;HealthRecord&gt; -> JSON),
+     * the write-side counterpart of the students.json array example.
+     */
+    @FXML
+    private void handleExportHealthRecordsJson() {
+        Person selected = personTable.getSelectionModel().getSelectedItem();
+        if (selected == null) {
+            showInfo("Select a person", "Select a person first so their records can be exported.");
+            return;
+        }
+        try {
+            List<HealthRecord> records = healthRecordDAO.getForPerson(selected.getId());
+            String json = JsonHealthService.toJsonArray(records);
+
+            TextArea area = new TextArea(json);
+            area.setEditable(false);
+            area.setWrapText(false);
+            area.setPrefRowCount(16);
+            area.setPrefColumnCount(60);
+
+            Dialog<ButtonType> dialog = new Dialog<>();
+            dialog.setTitle("Health Records - JSON Array");
+            dialog.setHeaderText("All health records for " + selected.getName() + ", as one JSON array");
+            dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
+            dialog.getDialogPane().setContent(area);
+            dialog.showAndWait();
+        } catch (Exception e) {
+            showDbError(e);
+        }
+    }
+
+    /**
+     * JSON array import: parses a pasted JSON array back into
+     * List&lt;HealthRecord&gt; with Jackson's TypeReference, then inserts
+     * each row for the currently selected person (their own id overrides
+     * whatever person_id was in the pasted JSON, the same way the tutorial's
+     * "read the list, add a record, write it back" exercise stays scoped to
+     * one owner).
+     */
+    @FXML
+    private void handleImportHealthRecordsJson() {
+        Person selected = personTable.getSelectionModel().getSelectedItem();
+        if (selected == null) {
+            showInfo("Select a person", "Select a person first so imported records have somewhere to go.");
+            return;
+        }
+
+        TextArea input = new TextArea();
+        input.setPromptText("Paste a JSON array of health records here, e.g. [ {\"recordDate\":\"2026-09-01\", ...}, ... ]");
+        input.setPrefRowCount(12);
+        input.setPrefColumnCount(60);
+
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.setTitle("Import Health Records - JSON Array");
+        dialog.setHeaderText("Paste a JSON array to insert as new records for " + selected.getName());
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+        dialog.getDialogPane().setContent(input);
+
+        dialog.showAndWait().filter(button -> button == ButtonType.OK).ifPresent(button -> {
+            try {
+                List<HealthRecord> parsed = JsonHealthService.parseHealthRecordArray(input.getText());
+                for (HealthRecord record : parsed) {
+                    record.setId(0);
+                    record.setPersonId(selected.getId());
+                    healthRecordDAO.insert(record);
+                }
+                refreshHealthRecordTable();
+                showInfo("Import completed", parsed.size() + " health record(s) inserted from the JSON array.");
+            } catch (Exception e) {
+                showDbError(e);
+            }
+        });
+    }
+
+    private HealthRecord readHealthRecordForm(int id, int personId) throws InvalidHealthDataException {
         String date = recordDateField.getText() == null ? "" : recordDateField.getText().trim();
-        if (date.isBlank()) throw new IllegalArgumentException("Date is required (YYYY-MM-DD).");
+        if (date.isBlank()) throw new InvalidHealthDataException("Date is required (YYYY-MM-DD).");
+        // Double.parseDouble stays unchecked: a genuine typo like "abc" throws
+        // NumberFormatException on its own, which showDbError() already catches.
         double sleep = Double.parseDouble(recordSleepField.getText().trim());
         double water = Double.parseDouble(recordWaterField.getText().trim());
         double exercise = Double.parseDouble(recordExerciseField.getText().trim());
         double stress = Double.parseDouble(recordStressField.getText().trim());
-        if (sleep < 0 || water < 0 || exercise < 0 || stress < 0) throw new IllegalArgumentException("Health values cannot be negative.");
+        if (sleep < 0 || water < 0 || exercise < 0 || stress < 0) {
+            throw new InvalidHealthDataException("Health values cannot be negative.");
+        }
         return new HealthRecord(id, personId, date, sleep, water, exercise, stress);
     }
 
@@ -533,12 +617,14 @@ public class GuideController implements Initializable {
         try { refreshPeopleTable(); refreshHealthRecordTable(); } catch (SQLException e) { showDbError(e); }
     }
 
-    private Person readPersonForm(int id) {
+    private Person readPersonForm(int id) throws InvalidHealthDataException {
         String name = personNameField.getText() == null ? "" : personNameField.getText().trim();
         String tip = personTipField.getText() == null ? "" : personTipField.getText().trim();
-        if (name.isBlank()) throw new IllegalArgumentException("Name is required.");
+        if (name.isBlank()) throw new InvalidHealthDataException("Name is required.");
+        // Integer.parseInt stays unchecked: non-numeric text throws NumberFormatException
+        // on its own, which is caught alongside InvalidHealthDataException below.
         int score = Integer.parseInt(personScoreField.getText().trim());
-        if (score < 0 || score > 100) throw new IllegalArgumentException("Weekly score must be between 0 and 100.");
+        if (score < 0 || score > 100) throw new InvalidHealthDataException("Weekly score must be between 0 and 100.");
         return new Person(id, name, tip, score);
     }
 

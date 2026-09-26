@@ -10,6 +10,11 @@ public class HealthRecord {
     private double exerciseMinutes;
     private double stressLevel;
 
+    /** No-arg constructor required by Jackson: it deserializes a JSON array
+     *  element by creating an empty object, then calling each setter below. */
+    public HealthRecord() {
+    }
+
     public HealthRecord(int id, int personId, String recordDate, double sleepHours, double waterGlasses, double exerciseMinutes, double stressLevel) {
         this.id = id; this.personId = personId; this.recordDate = recordDate;
         this.sleepHours = sleepHours; this.waterGlasses = waterGlasses;

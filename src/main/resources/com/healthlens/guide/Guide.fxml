@@ -177,6 +177,18 @@
                     <Button onAction="#handleUpdateHealthRecord" styleClass="reset-button" text="UPDATE RECORD" />
                     <Button onAction="#handleDeleteHealthRecord" styleClass="reset-button" text="DELETE RECORD" />
                 </HBox>
+                <HBox spacing="8.0">
+                    <Button onAction="#handleExportHealthRecordsJson" styleClass="reset-button" text="{} Export Records (JSON array)">
+                        <tooltip>
+                            <Tooltip text="Serializes this person's health records into one JSON array with Jackson" />
+                        </tooltip>
+                    </Button>
+                    <Button onAction="#handleImportHealthRecordsJson" styleClass="reset-button" text="↧ Import Records (JSON array)">
+                        <tooltip>
+                            <Tooltip text="Parses a pasted JSON array back into a List&lt;HealthRecord&gt; and inserts each row" />
+                        </tooltip>
+                    </Button>
+                </HBox>
                 <TableView fx:id="healthRecordTable" prefHeight="155.0">
                     <columns>
                         <TableColumn fx:id="recordIdColumn" prefWidth="45.0" text="ID" />
