@@ -51,6 +51,7 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
@@ -59,6 +60,7 @@ import javafx.scene.shape.Arc;
 import javafx.scene.shape.ArcType;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.StrokeLineCap;
+import javafx.scene.shape.SVGPath;
 import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
@@ -100,6 +102,7 @@ public class HealthLensController {
     @FXML private Button settingsButton;
     @FXML private Button chatButton;
     @FXML private Button activityCenterButton;
+    private Label activityBadgeLabel;
     @FXML private Label subtitleLabel;
     @FXML private Label reminderBanner;
     @FXML private StackPane profileAvatarStack;
@@ -184,6 +187,7 @@ public class HealthLensController {
         updateGoalLabels();
         applyThemeWhenSceneReady();
         setupProfileAvatar();
+        setupActivityCenterIcon();
         setupBatteryIndicator();
         Tooltip.install(profileAvatarStack, new Tooltip("Your profile — click to change picture, email, or background"));
         startBackgroundServices();
@@ -346,10 +350,51 @@ public class HealthLensController {
         hide.play();
     }
 
-    /** Shows the unread count on the bell, the way any notification UI does. */
+    /** Builds a real vector activity/pulse icon instead of using a Unicode glyph. */
+    private void setupActivityCenterIcon() {
+        SVGPath pulse = new SVGPath();
+        pulse.setContent("M2 12 H6 L9 5 L13 19 L16 12 H22");
+        pulse.setFill(Color.TRANSPARENT);
+        pulse.setStroke(Color.web("#0ea5a1"));
+        pulse.setStrokeWidth(2.2);
+        pulse.setStrokeLineCap(StrokeLineCap.ROUND);
+        pulse.setStrokeLineJoin(javafx.scene.shape.StrokeLineJoin.ROUND);
+
+        StackPane icon = new StackPane();
+        icon.setPrefSize(22, 22);
+        icon.setMinSize(22, 22);
+        icon.setMaxSize(22, 22);
+        icon.getChildren().add(pulse);
+
+        activityBadgeLabel = new Label();
+        activityBadgeLabel.setStyle(
+                "-fx-background-color: #ef4444;" +
+                "-fx-background-radius: 10;" +
+                "-fx-text-fill: white;" +
+                "-fx-font-size: 8px;" +
+                "-fx-font-weight: bold;" +
+                "-fx-alignment: center;" +
+                "-fx-padding: 0;" +
+                "-fx-min-width: 14px; -fx-min-height: 14px;" +
+                "-fx-max-width: 14px; -fx-max-height: 14px;");
+        StackPane.setAlignment(activityBadgeLabel, javafx.geometry.Pos.TOP_RIGHT);
+        StackPane.setMargin(activityBadgeLabel, new Insets(-4, -6, 0, 0));
+        icon.getChildren().add(activityBadgeLabel);
+
+        activityCenterButton.setText("");
+        activityCenterButton.setGraphic(icon);
+        activityCenterButton.setContentDisplay(javafx.scene.control.ContentDisplay.GRAPHIC_ONLY);
+    }
+
+    /** Updates the unread badge without moving or replacing the icon itself. */
     private void updateNotificationBadge() {
         int unread = services.getNotificationCenter().getUnreadCount();
-        activityCenterButton.setText(unread == 0 ? "▥" : "▥ " + unread);
+        if (activityBadgeLabel == null) {
+            return;
+        }
+        activityBadgeLabel.setText(unread > 99 ? "99+" : String.valueOf(unread));
+        activityBadgeLabel.setVisible(unread > 0);
+        activityBadgeLabel.setManaged(unread > 0);
     }
 
     // ===================== GUIDED BREATHING =====================
@@ -974,14 +1019,28 @@ public class HealthLensController {
         box.setAlignment(javafx.geometry.Pos.CENTER);
         box.getStyleClass().add("recommendation-ring-card");
 
-        StackPane ringPane = new StackPane();
-        ringPane.setPrefSize(132, 132);
-        Circle track = new Circle(48);
+        // Use a fixed Pane rather than StackPane for the ring layers.
+        // StackPane re-centers an Arc according to its changing layout bounds,
+        // so a different sweep angle can make the coloured arc appear to jump.
+        // With explicit center coordinates, the background circle, arc and text
+        // stay locked together even when the value is updated by a worker thread.
+        final double size = 132;
+        final double centerX = size / 2.0;
+        final double centerY = size / 2.0;
+        final double radius = 48;
+
+        Pane ringPane = new Pane();
+        ringPane.setPrefSize(size, size);
+        ringPane.setMinSize(size, size);
+        ringPane.setMaxSize(size, size);
+
+        Circle track = new Circle(centerX, centerY, radius);
         track.setFill(Color.TRANSPARENT);
         track.setStroke(Color.web("#30344b"));
         track.setStrokeWidth(10);
 
-        Arc fill = new Arc(0, 0, 48, 48, 90, -360 * Math.max(0, Math.min(1, progress)));
+        double safeProgress = Math.max(0, Math.min(1, progress));
+        Arc fill = new Arc(centerX, centerY, radius, radius, 90, -360 * safeProgress);
         fill.setType(ArcType.OPEN);
         fill.setFill(Color.TRANSPARENT);
         fill.setStroke(Color.web(color));
@@ -990,6 +1049,12 @@ public class HealthLensController {
 
         Label center = new Label(centerText);
         center.getStyleClass().add("recommendation-ring-value");
+        center.setLayoutX(centerX - 48);
+        center.setLayoutY(centerY - 15);
+        center.setPrefWidth(96);
+        center.setPrefHeight(30);
+        center.setAlignment(javafx.geometry.Pos.CENTER);
+
         ringPane.getChildren().addAll(track, fill, center);
 
         Label name = new Label(title);

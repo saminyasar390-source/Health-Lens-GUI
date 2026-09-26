@@ -1,19 +1,21 @@
 package com.healthlens.json;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
 import com.healthlens.model.HealthData;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 
-import java.io.InputStream;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.io.InputStream;
 
 /**
- * Handles JSON serialization, parsing, and API response processing using Jackson.
+ * Handles JSON serialization, parsing, and API response processing.
  *
  * Week 7 concepts demonstrated here:
  *  1. Java object -> JSON string (serialization)
@@ -26,9 +28,9 @@ import java.nio.charset.StandardCharsets;
  */
 public final class JsonHealthService {
 
-    /** Jackson's main JSON mapper. */
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper()
-            .enable(SerializationFeature.INDENT_OUTPUT);
+    private static final Gson GSON = new GsonBuilder()
+            .setPrettyPrinting()
+            .create();
 
     private static final HttpClient HTTP_CLIENT = HttpClient.newHttpClient();
 
@@ -37,19 +39,16 @@ public final class JsonHealthService {
     }
 
     /** Converts the current HealthData model into readable JSON. */
-    public static String toJson(HealthData healthData) throws Exception {
-        if (healthData == null) {
-            throw new IllegalArgumentException("HealthData is null.");
-        }
-        return OBJECT_MAPPER.writeValueAsString(healthData);
+    public static String toJson(HealthData healthData) {
+        return GSON.toJson(healthData);
     }
 
     /** Converts JSON back into a HealthData Java object. */
-    public static HealthData fromJson(String json) throws Exception {
+    public static HealthData fromJson(String json) {
         if (json == null || json.isBlank()) {
             throw new IllegalArgumentException("JSON is empty.");
         }
-        return OBJECT_MAPPER.readValue(json, HealthData.class);
+        return GSON.fromJson(json, HealthData.class);
     }
 
     /**
@@ -61,19 +60,19 @@ public final class JsonHealthService {
      *
      *   { "status": "success", "data": { "sleepHours": 8, ... } }
      */
-    public static HealthData parseApiResponse(String json) throws Exception {
+    public static HealthData parseApiResponse(String json) {
         if (json == null || json.isBlank()) {
             throw new IllegalArgumentException("API response is empty.");
         }
 
-        JsonNode root = OBJECT_MAPPER.readTree(json);
-        JsonNode data = root.has("data") ? root.get("data") : root;
+        JsonObject root = JsonParser.parseString(json).getAsJsonObject();
+        JsonElement data = root.has("data") ? root.get("data") : root;
 
-        if (data == null || !data.isObject()) {
+        if (data == null || !data.isJsonObject()) {
             throw new IllegalArgumentException("API response does not contain a JSON object.");
         }
 
-        return OBJECT_MAPPER.treeToValue(data, HealthData.class);
+        return GSON.fromJson(data, HealthData.class);
     }
 
     /**
