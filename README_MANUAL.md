@@ -214,3 +214,14 @@ Expected shape:
 - **↧ Import JSON** converts pasted JSON back into the Java model.
 
 The existing `HealthLensController -> HealthData -> ScoreCalculator -> View` flow remains unchanged. JSON is an additional data input/output layer.
+
+
+## Live JSON API demonstration
+
+The project uses this verified public JSON endpoint for the live Jackson demonstration:
+
+https://dummyjson.com/products/1
+
+The response contains the fields used by `OnlineApiDemoResult`: `id`, `title`, `category`, and `price`. `JsonHealthService.runOnlineApiDemo()` performs the HTTP GET and parses those fields with Jackson `JsonNode`.
+
+This endpoint is deliberately used for the **networking + JSON parsing demonstration**. It is not deserialized into `HealthData`, because its schema is a product object rather than a HealthLens health record. The HealthLens-specific `HealthData` JSON is handled by the bundled sample JSON/import flow.

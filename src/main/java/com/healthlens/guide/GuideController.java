@@ -110,6 +110,12 @@ public class GuideController implements Initializable {
     @FXML private TableColumn<HealthRecord, Double> recordWaterColumn;
     @FXML private TableColumn<HealthRecord, Double> recordExerciseColumn;
     @FXML private TableColumn<HealthRecord, Double> recordStressColumn;
+    @FXML private TextField recordDateField;
+    @FXML private TextField recordSleepField;
+    @FXML private TextField recordWaterField;
+    @FXML private TextField recordExerciseField;
+    @FXML private TextField recordStressField;
+    @FXML private Label selectedPersonLabel;
 
     // --- page 7 ---
     @FXML private TextArea goalTextArea;
@@ -398,7 +404,12 @@ public class GuideController implements Initializable {
                 personNameField.setText(selected.getName());
                 personTipField.setText(selected.getHealthTip());
                 personScoreField.setText(String.valueOf(selected.getWeeklyScore()));
+                selectedPersonLabel.setText("Health records for: " + selected.getName() + " (Person ID " + selected.getId() + ")");
+                try { refreshHealthRecordTable(); } catch (SQLException e) { showDbError(e); }
             }
+        });
+        healthRecordTable.getSelectionModel().selectedItemProperty().addListener((obs, oldV, selected) -> {
+            if (selected != null) fillHealthRecordForm(selected);
         });
         try {
             personDAO.seedDemoDataIfNeeded();
@@ -416,7 +427,13 @@ public class GuideController implements Initializable {
     }
 
     private void refreshHealthRecordTable() throws SQLException {
-        healthRecordTable.setItems(FXCollections.observableArrayList(healthRecordDAO.getAll()));
+        Person selected = personTable.getSelectionModel().getSelectedItem();
+        if (selected == null) {
+            healthRecordTable.setItems(FXCollections.observableArrayList());
+            selectedPersonLabel.setText("Select a person to view their health records.");
+            return;
+        }
+        healthRecordTable.setItems(FXCollections.observableArrayList(healthRecordDAO.getForPerson(selected.getId())));
     }
 
     @FXML private void handleCreatePerson() {
@@ -452,6 +469,66 @@ public class GuideController implements Initializable {
         } catch (Exception e) { showDbError(e); }
     }
 
+
+    @FXML private void handleCreateHealthRecord() {
+        Person selected = personTable.getSelectionModel().getSelectedItem();
+        if (selected == null) { showInfo("Select a person", "Select a person first so the new record can be linked through person_id."); return; }
+        try {
+            HealthRecord record = readHealthRecordForm(0, selected.getId());
+            healthRecordDAO.insert(record);
+            refreshHealthRecordTable();
+            clearHealthRecordForm();
+            showInfo("CREATE completed", "Health record added for " + selected.getName() + ".");
+        } catch (Exception e) { showDbError(e); }
+    }
+
+    @FXML private void handleUpdateHealthRecord() {
+        Person selectedPerson = personTable.getSelectionModel().getSelectedItem();
+        HealthRecord selected = healthRecordTable.getSelectionModel().getSelectedItem();
+        if (selectedPerson == null || selected == null) { showInfo("Select a record", "Select a person and one of their health records first."); return; }
+        try {
+            HealthRecord updated = readHealthRecordForm(selected.getId(), selectedPerson.getId());
+            healthRecordDAO.update(updated);
+            refreshHealthRecordTable();
+            showInfo("UPDATE completed", "The selected health record was updated in SQLite.");
+        } catch (Exception e) { showDbError(e); }
+    }
+
+    @FXML private void handleDeleteHealthRecord() {
+        HealthRecord selected = healthRecordTable.getSelectionModel().getSelectedItem();
+        if (selected == null) { showInfo("Select a record", "Select a health record before deleting it."); return; }
+        try {
+            healthRecordDAO.delete(selected.getId());
+            refreshHealthRecordTable();
+            clearHealthRecordForm();
+            showInfo("DELETE completed", "The selected health record was deleted.");
+        } catch (Exception e) { showDbError(e); }
+    }
+
+    private HealthRecord readHealthRecordForm(int id, int personId) {
+        String date = recordDateField.getText() == null ? "" : recordDateField.getText().trim();
+        if (date.isBlank()) throw new IllegalArgumentException("Date is required (YYYY-MM-DD).");
+        double sleep = Double.parseDouble(recordSleepField.getText().trim());
+        double water = Double.parseDouble(recordWaterField.getText().trim());
+        double exercise = Double.parseDouble(recordExerciseField.getText().trim());
+        double stress = Double.parseDouble(recordStressField.getText().trim());
+        if (sleep < 0 || water < 0 || exercise < 0 || stress < 0) throw new IllegalArgumentException("Health values cannot be negative.");
+        return new HealthRecord(id, personId, date, sleep, water, exercise, stress);
+    }
+
+    private void fillHealthRecordForm(HealthRecord r) {
+        recordDateField.setText(r.getRecordDate());
+        recordSleepField.setText(String.valueOf(r.getSleepHours()));
+        recordWaterField.setText(String.valueOf(r.getWaterGlasses()));
+        recordExerciseField.setText(String.valueOf(r.getExerciseMinutes()));
+        recordStressField.setText(String.valueOf(r.getStressLevel()));
+    }
+
+    private void clearHealthRecordForm() {
+        recordDateField.clear(); recordSleepField.clear(); recordWaterField.clear(); recordExerciseField.clear(); recordStressField.clear();
+        healthRecordTable.getSelectionModel().clearSelection();
+    }
+
     @FXML private void handleRefreshPeople() {
         try { refreshPeopleTable(); refreshHealthRecordTable(); } catch (SQLException e) { showDbError(e); }
     }
@@ -465,7 +542,7 @@ public class GuideController implements Initializable {
         return new Person(id, name, tip, score);
     }
 
-    private void clearPersonForm() { personNameField.clear(); personTipField.clear(); personScoreField.clear(); personTable.getSelectionModel().clearSelection(); }
+    private void clearPersonForm() { personNameField.clear(); personTipField.clear(); personScoreField.clear(); personTable.getSelectionModel().clearSelection(); clearHealthRecordForm(); }
 
     private void showDbError(Exception e) {
         Alert a = new Alert(Alert.AlertType.ERROR); a.setTitle("Database Error"); a.setHeaderText("SQLite operation failed"); a.setContentText(e.getMessage()); a.showAndWait();

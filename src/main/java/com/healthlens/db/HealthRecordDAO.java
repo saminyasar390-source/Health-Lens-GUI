@@ -14,6 +14,16 @@ public class HealthRecordDAO {
             try(ResultSet k=p.getGeneratedKeys()){if(k.next())r.setId(k.getInt(1));}
         }
     }
+    public List<HealthRecord> getForPerson(int personId) throws SQLException {
+        List<HealthRecord> out=new ArrayList<>();
+        String sql="SELECT id,person_id,record_date,sleep_hours,water_glasses,exercise_minutes,stress_level FROM health_records WHERE person_id=? ORDER BY record_date DESC, id DESC";
+        try(Connection c=Database.connect();PreparedStatement p=c.prepareStatement(sql)){
+            p.setInt(1, personId);
+            try(ResultSet rs=p.executeQuery()){while(rs.next())out.add(new HealthRecord(rs.getInt(1),rs.getInt(2),rs.getString(3),rs.getDouble(4),rs.getDouble(5),rs.getDouble(6),rs.getDouble(7)));}
+        }
+        return out;
+    }
+
     public List<HealthRecord> getAll() throws SQLException {
         List<HealthRecord> out=new ArrayList<>();
         String sql="SELECT id,person_id,record_date,sleep_hours,water_glasses,exercise_minutes,stress_level FROM health_records ORDER BY id";

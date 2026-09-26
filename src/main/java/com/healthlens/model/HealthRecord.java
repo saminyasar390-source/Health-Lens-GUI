@@ -21,6 +21,8 @@ public class HealthRecord {
     public int getId(){return id;} public void setId(int id){this.id=id;}
     public int getPersonId(){return personId;} public void setPersonId(int personId){this.personId=personId;}
     public String getRecordDate(){return recordDate;} public void setRecordDate(String recordDate){this.recordDate=recordDate;}
-    public double getSleepHours(){return sleepHours;} public double getWaterGlasses(){return waterGlasses;}
-    public double getExerciseMinutes(){return exerciseMinutes;} public double getStressLevel(){return stressLevel;}
+    public double getSleepHours(){return sleepHours;} public void setSleepHours(double v){this.sleepHours=v;}
+    public double getWaterGlasses(){return waterGlasses;} public void setWaterGlasses(double v){this.waterGlasses=v;}
+    public double getExerciseMinutes(){return exerciseMinutes;} public void setExerciseMinutes(double v){this.exerciseMinutes=v;}
+    public double getStressLevel(){return stressLevel;} public void setStressLevel(double v){this.stressLevel=v;}
 }
